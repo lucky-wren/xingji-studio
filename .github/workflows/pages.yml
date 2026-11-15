@@ -1,0 +1,49 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 清理构建中间目录
+        run: rm -rf media/_build_tmp
+
+      # 上线闸门：坏数据不允许部署。后台导出覆盖 data/ 后 push 会先过这两关，
+      # 结构错误（缺城 / id 重复 / JS↔JSON 不一致 / 基线 id 错配 / 配置引用
+      # 不存在的城）直接红灯；内容提醒（票价已补真实值等）只打印不阻断。
+      - name: 数据硬校验（不合格不部署）
+        run: |
+          python3 tools/validate_full_data.py
+          python3 tools/validate_plan_config.py
+          python3 tools/validate_city_art.py
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传静态站点（仓库根目录，无需构建）
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

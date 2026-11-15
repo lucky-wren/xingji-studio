@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行迹 · 使用说明（GitHub Pages 静态版）</title>
+<style>
+:root{--paper:#f7f4ec;--ink:#1c2b24;--ink2:#4a6257;--green:#2f6b53;--clay:#c96f42;--line:#dfe6dd}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.85 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:38px 26px 80px}
+h1{font-size:30px;margin:0 0 6px;letter-spacing:1px}
+.lead{color:var(--ink2);margin:0 0 28px;font-size:14.5px}
+h2{font-size:19px;margin:34px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--green)}
+h2 span{color:var(--clay);margin-right:8px;font-variant-numeric:tabular-nums}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:12px 0;box-shadow:0 2px 10px rgba(28,43,36,.04)}
+.card b{color:var(--green)}
+code{background:#eef3ee;padding:2px 6px;border-radius:5px;font-size:13px;color:#1f4d3b}
+.step{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:10px 0;align-items:start}
+.num{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;text-align:center;line-height:28px;font-weight:700;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:#eef4ef;color:var(--green)}
+.warn{background:#fff6ec;border-left:4px solid var(--clay);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0;font-size:13.5px}
+.ok{background:#eef8f1;border-left:4px solid var(--green);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0;font-size:13.5px}
+a{color:var(--green)}
+.foot{color:#8a9a90;font-size:12.5px;margin-top:40px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>行迹 · 使用说明</h1>
+<p class="lead">完整行程工作台 + LibreTTS 微软神经音色的行程成片 · 可直接部署到 GitHub Pages 的静态站</p>
+
+<h2><span>01</span>打开就能用</h2>
+<div class="card">
+  <div class="ok"><b>本地看：</b>双击 <code>index.html</code> 即可打开完整工作台，36 座城市、衣食住行、逐日路线、游玩地图、视频合成全部可用。<br>
+  <b>上线：</b>把整个目录 push 到 GitHub 仓库 → Settings → Pages → Source 选 <b>GitHub Actions</b> → Actions 跑一次「Deploy GitHub Pages」。</div>
+  <p>不需要装 Python、不需要装 ffmpeg、不需要跑 <code>run.bat</code>。这一版是纯静态站。</p>
+</div>
+
+<h2><span>02</span>人声：LibreTTS · 微软神经音色</h2>
+<div class="card">
+  <p>切到「视频合成 06」，会看到浅绿色的 <b>LibreTTS · 微软神经音色</b> 卡片，只有三样：</p>
+  <table>
+    <tr><th>控件</th><th>作用</th></tr>
+    <tr><td>音色</td><td>优先从 <code>/api/voices?l=zh&amp;f=1</code> 拉中文音色；拉不到用内置 23 个常用中文音色</td></tr>
+    <tr><td>🔊 试听一句</td><td>用成片同一个接口、同一个音色先听一句。<b>只播一次，不写入音轨、不改时间轴、不触发合成</b></td></tr>
+    <tr><td>⬆ 逐句合成到人声轨</td><td>逐句合成真实音频写进每一镜，按真实时长重排帧长 / 字幕 / SRT</td></tr>
+  </table>
+  <p>接口地址、探测、调试 URL 等都不在界面上：<code>config.js</code> 里配置，页面启动自动选可用实例。语速 / 语调 / 并发同样在 <code>config.js</code> 里改。</p>
+</div>
+
+<h2 id="cors"><span>03</span>接口不给 CORS 怎么办（界面上不用填地址）</h2>
+<div class="card">
+  <p>工作台界面上只有<b>音色 / 试听一句 / 逐句合成到人声轨</b>，没有地址输入框。页面启动会静默探测 <code>config.js</code> 里列出的实例，第一个可用就自动使用；全部不可用时，卡片上会出现一句提示和「查看解决办法」链接。</p>
+  <div class="step"><div class="num">1</div><div>公共实例本身给了 CORS：<b>什么都不用做</b>，直接试听、合成。</div></div>
+  <div class="step"><div class="num">2</div><div>本机使用：跑一次 <code>python tools/bridge.py</code>（默认 <code>127.0.0.1:8790</code>，启动探测会自动找到它），无需改任何配置。</div></div>
+  <div class="step"><div class="num">3</div><div>想让任何访客打开网页就能合成：把 <code>tools/cors-worker.js</code> 部署成 Cloudflare Worker，然后把 Worker 地址写进 <code>config.js</code> 的 <code>instances</code> 数组，push 即可。页面不需要填地址。</div></div>
+  <div class="warn"><b>隐私提醒：</b>文案会经过 LibreTTS 公共实例服务器转发到微软。项目本身无数据库、不留存，但商用前请确认微软与实例方条款；隐私内容请自建实例或走本机桥。</div>
+</div>
+
+<h2><span>04</span>一键成片（同步是怎么保证的）</h2>
+<div class="card">
+  <div class="step"><div class="num">1</div><div>在字幕区逐句改文案 —— 字幕就是画面文案，也是朗读文案。</div></div>
+  <div class="step"><div class="num">2</div><div>点「⬆ 逐句合成到人声轨」（或直接点唯一的生成按钮，它会先合成）。</div></div>
+  <div class="step"><div class="num">3</div><div>每句音频的 <code>AudioBuffer.duration</code> 成为唯一事实来源，同时决定<b>帧长、字幕窗口、SRT、音轨起点</b>。</div></div>
+  <div class="step"><div class="num">4</div><div>播放与导出只读一个主时钟，播放期间时间轴保持只读；改任何字幕 / 音色 / 语速都会让配音缓存失效重合成。</div></div>
+  <div class="ok"><b>这和 B 站 / 剪映 一样：</b>先有确定音频，再由它牵着画面和字幕走。浏览器系统嗓音彻底退出时间轴，不会再出现「话念完了画面没切」。</div>
+</div>
+
+<h2><span>04.2</span>新增城市 · 填名字就出完整行程</h2>
+<div class="card">
+  <p>工作台里的城市<b>不是写死在页面里</b>的。侧栏点「⚙ 后台管理」→「＋ 新增城市」，
+  只填城市名就能生成完整行程，<b>不用写 JSON</b>。</p>
+  <table>
+    <tr><th>步骤</th><th>怎么做</th></tr>
+    <tr><td>① 填城市名</td><td>只填这一项也能生成；其余留空系统自动补</td></tr>
+    <tr><td>② 贴落点</td><td>一行一个景点名，可写 <code>名称 | 区域</code> 指定区域；写几个就够，不用凑满</td></tr>
+    <tr><td>③ 选天数 / 气候带</td><td>决定排几天、穿什么；最多 7 天</td></tr>
+    <tr><td>④ 点「生成规划并添加」</td><td>自动切到这座城、跳到路线页，弹窗里显示生成了几段内容</td></tr>
+  </table>
+  <div class="ok"><b>生成的是完整规划，不是空壳：</b>逐日路线（每天都有真实安排）、衣食住行四象限、
+  地图落点、视频分镜与讲解词、封面标语全部一起生成。没填够的落点会用
+  <code>【通用建议】</code> 场景补足（如「老城街区 / 滨水步道 / 本地市集」），
+  并明确标注<b>不是具体景点名称，出行前请换成当地实际地点并核对开放信息</b>。</div>
+  <p>「已添加的城市」里可以「切换到」「移除」「↓ 导出自定义城市 JSON」「↺ 恢复默认城市」。
+  新增只存在<b>这台设备的浏览器里</b>，刷新不丢；要让所有访客看到，把导出的 <code>cities</code>
+  数组并进 <code>data/cities.js</code> 的 <code>extended</code> 再部署即可。</p>
+  <p>要批量导入或精确控制每个字段，点弹窗第二个 tab「⚙ JSON 高级」，那里保留上传文件、
+  下载完整模板和逐条校验（字段说明见仓库 <code>data/cities.schema.md</code>）。
+  <b>手写 JSON 只给少量景点时路线会出现留白</b>，要完整行程请用向导。</p>
+</div>
+
+<h2><span>04.3</span>导航与侧栏</h2>
+<div class="card">
+  <p>顶栏 <b>☰</b> 用于收起 / 展开目的地侧栏。</p>
+  <p>点顶部 6 个主标签，页面会滚到那块内容的顶部；顶栏「⌘ 快速跳转」下拉顶部会显示
+  「当前：路线规划」。点下拉里的「✍ 字幕 / 🧩 分镜 / 🎬 成片」，会先切到视频合成页、
+  再切到对应模块，最后把目标卡片滚到眼前并短暂高亮 —— 点了就能看到，不用自己找。</p>
+</div>
+
+<h2><span>04.4</span>右侧工具栏与音量</h2>
+<div class="card">
+  <p>视频合成页是<b>左边预览台 + 右边一整列</b>：右侧栏顶部是 5 段工具栏（内容 / 字幕 / 声音 / 时间轴 / 导出），
+  下面就是同一块参数面板。点哪段，<b>只替换右侧同一位置的内容</b>并滚动定位、回显「已定位」，
+  预览画面和播放器不会重建、播放不中断、页面也不会跳走。
+  面板头「⤡ 折叠本页」按模块记住状态，预览台上的「⌗ 专注」只收起参数面板、保留窄工具条，让画面铺宽。</p>
+  <p>「声音」页直接调<b>总音量</b>；人声与配乐音量收在「⚙ 更多」里，与试听、导出的成片是<b>同一组数值</b>，
+  不会出现「试听一个样、导出另一个样」。默认无配乐，需要时上传自己的音频文件；内置曲库与音效已不提供。
+  「🔊 试听当前混音」放的就是导出用的那条音轨。</p>
+</div>
+
+<h2><span>04.5</span>数据从哪来 · 怎么让全站生效</h2>
+<div class="card">
+  <p>这是<b>纯静态 GitHub Pages 站点</b>，没有数据库、没有服务器。内容只在两个文件里：</p>
+  <table>
+    <tr><th>文件</th><th>管什么</th></tr>
+    <tr><td><code>data/cities.js</code></td><td>36 座城市的全部素材：景点、美食、住宿、交通、分季穿搭、来源链接</td></tr>
+    <tr><td><code>config.js</code></td><td>成片栏目结构（衣食住行各显示哪些字段、口播怎么拼）+ 人声接口配置</td></tr>
+  </table>
+  <p>每一镜的<b>画面文字行、字幕、SRT、人声朗读稿是同一份数据</b>：
+  画面上画出来的每一行拼起来，就是字幕和朗读的文本。改字幕，画面和人声一起变。
+  弹窗「↓ 导出成片脚本 JSON」可以逐镜核对。</p>
+  <p><b>上线闭环</b>：侧栏「＋ 城市数据」里改好 → 点「↓ 导出全站内容包 cities.js」→
+  覆盖仓库的 <code>data/cities.js</code> → <code>git push</code> → GitHub Actions 自动重新部署 →
+  所有访客立即生效。本机改动只存浏览器 localStorage，<b>不提交就只有你自己看得到</b>。</p>
+  <div class="ok"><b>完整说明：</b>仓库里的 <code>数据链路与内容配置.md</code> 逐项写了字段设计、
+  <code>buildRoute()</code> 怎么排行程、<code>sceneData()</code> 怎么变成画面与字幕，以及导出的内容包如何自证没写死。</div>
+</div>
+
+<h2><span>04.6</span>配乐 / 音效 / 水印</h2>
+<div class="card">
+  <table>
+    <tr><th>模块</th><th>能做什么</th></tr>
+    <tr><td>🎵 配乐</td><td>6 首内置曲库（浏览器实时合成，不引入第三方录音），每首可先试听再选用；支持上传自己的音乐、调音量、人声响起时自动闪避</td></tr>
+    <tr><td>✨ 音效</td><td>8 种内置音效、可上传自定义；设成「每次切镜」或只绑定到某几镜，按画面时间码混进成片音轨</td></tr>
+    <tr><td>🖋 水印</td><td>文字或图片、九宫格定位、字号 / 颜色 / 描边 / 透明度 / 边距、斜向平铺防盗、显示范围；三套一键预设</td></tr>
+  </table>
+  <p>水印是<b>烧录进每一帧画面</b>的：预览、WebM、PNG 分镜包、工程包帧图、GIF 全部自动带上，发布到平台也不会被剥掉。图片水印以 Data URL 内嵌进制作包 JSON，载入时自动还原。</p>
+  <div class="ok"><b>上手建议：</b>「画面」模块里先套一个「品牌角标」预设，改成自己的账号名；默认位置在右上，不会压住底部字幕板。</div>
+</div>
+
+<h2><span>05</span>导出</h2>
+<div class="card">
+  <table>
+    <tr><th>出口</th><th>得到什么</th></tr>
+    <tr><td>⚡ 快速导出</td><td>WebCodecs 非实时编码的 WebM（VP8/VP9 + Opus），自带人声与配乐，几秒出片</td></tr>
+    <tr><td>↓ 完整混音 WAV / SRT / 文稿</td><td>人声 + 配乐音轨、按真实时长生成的字幕文件</td></tr>
+    <tr><td>↓ PNG 分镜包</td><td>逐镜高清帧图 + 时间轴 JSON + SRT + 说明，可进剪映 / PR</td></tr>
+    <tr><td>↓ 制作包 JSON</td><td>文案 + 接口/音色/语速 + 每镜真实时长</td></tr>
+    <tr><td>📺 仅字幕</td><td>明确无配音，秒级出片</td></tr>
+  </table>
+  <p>要<b>通用 H.264/AAC MP4</b>：把制作包和帧图放进 <code>media/source/</code>，在 Actions 跑「重建静态成品」。</p>
+</div>
+
+<h2><span>06</span>让网站打开就有成品（可选）</h2>
+<div class="card">
+  <div class="step"><div class="num">1</div><div>工作台点「↓ 制作包 JSON」→ 存为 <code>media/source/project.json</code></div></div>
+  <div class="step"><div class="num">2</div><div>工作台点「PNG 分镜包」→ 帧图放进 <code>media/source/frames/</code></div></div>
+  <div class="step"><div class="num">3</div><div>GitHub Actions 手动跑「重建静态成品（LibreTTS 神经人声）」</div></div>
+  <div class="step"><div class="num">4</div><div>7 项硬校验全过才发布到 <code>media/latest/</code>；页面按相对路径读取，刷新不丢、可开关软字幕</div></div>
+</div>
+
+<div class="warn">
+<b>要如实说明的几件事</b><br>
+· 开发环境出口策略拦了 <code>libretts.is-an.org</code>，真实公共实例未能在这里实连；接口按官方 README 实现，端到端验证用 <code>tools/mock_libretts.py</code> 完成。部署后点「一键探测」即可确认你的网络。<br>
+· 第三方公共实例不保证长期可用，失败会明确提示并给出桥 / Worker / 自建三条路。<br>
+· 行程内容仍是 2026-11-09 快照 / 结构化攻略，票价与营业时间出行前请核对。
+</div>
+
+<p class="foot">行迹 · 旅行灵感工作台 | 静态版 | LibreTTS 为第三方开源项目（MIT），微软 Edge 神经音色为非官方接口，商用前请确认条款</p>
+</div></body></html>

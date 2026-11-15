@@ -1,0 +1,73 @@
+name: 重建静态成品（LibreTTS 神经人声）
+
+# 手动触发：把工作台导出的「制作包 JSON」放进 media/source/project.json，
+# 可选把「PNG 分镜包」的帧图放进 media/source/frames/，然后跑这个 workflow。
+# 它会逐句调 LibreTTS → ffprobe 读真实时长 → 生成 SRT / MP3 / 三轨 MP4
+# → 发布到 media/latest/ → 部署 Pages。页面按相对路径读取，刷新不丢。
+
+on:
+  workflow_dispatch:
+    inputs:
+      endpoint:
+        description: LibreTTS 接口地址
+        required: false
+        default: 'https://libretts.is-an.org'
+      commit_result:
+        description: 把成品提交回仓库（方便版本留存）
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 检查输入
+        run: |
+          test -f media/source/project.json || {
+            echo "::error::缺少 media/source/project.json，请先在工作台点「↓ 制作包 JSON」并放进该目录";
+            exit 1;
+          }
+          echo "制作包场景数："
+          python3 -c "import json;print(len(json.load(open('media/source/project.json'))['scenes']))"
+
+      - name: 构建静态成品
+        env:
+          LIBRETTS_ENDPOINT: ${{ inputs.endpoint }}
+        run: |
+          python3 tools/build_film.py --endpoint "$LIBRETTS_ENDPOINT"
+
+      - name: 展示构建状态
+        if: always()
+        run: |
+          if [ -f media/latest/BUILD_STATUS.json ]; then
+            cat media/latest/BUILD_STATUS.json
+          fi
+
+      - name: 提交成品回仓库
+        if: ${{ inputs.commit_result }}
+        run: |
+          git config user.name  "xingji-bot"
+          git config user.email "xingji-bot@users.noreply.github.com"
+          git add media/latest/
+          git diff --cached --quiet || git commit -m "chore: 重建静态成品 [skip ci]"
+          git push
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传静态站点
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy
+        uses: actions/deploy-pages@v4

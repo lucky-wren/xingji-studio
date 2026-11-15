@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+media/_build_tmp/
+.DS_Store
+Thumbs.db
+node_modules/
+*.log
+
+# 本机的部署凭据，绝不进仓库
+token.txt
+repo.txt
+deploy.log
+.deploy_state.json

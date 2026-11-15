@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行迹 · Token 一次配置</title>
+<style>
+  :root{--ink:#243b35;--paper:#f6f3ec;--green:#3f6f63;--clay:#c4703f;--line:#e3ddd1}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.8 -apple-system,BlinkMacSystemFont,"WenQuanYi Micro Hei","Microsoft YaHei",sans-serif}
+  .wrap{max-width:780px;margin:0 auto;padding:44px 22px 80px}
+  .kicker{font-size:12px;letter-spacing:.24em;color:var(--clay);font-weight:700}
+  h1{font-size:30px;margin:10px 0 6px;letter-spacing:-.02em}
+  .sub{color:#6c7a74;margin:0 0 26px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin:14px 0;
+    box-shadow:0 6px 24px rgba(36,59,53,.05)}
+  h2{font-size:17px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+  .num{width:25px;height:25px;border-radius:8px;background:var(--green);color:#fff;font-size:12px;
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
+  ol{margin:0;padding-left:22px}li{margin:8px 0}
+  code{background:#f1efe8;border-radius:6px;padding:2px 7px;font-size:13px;color:#8a4a24}
+  .chk{background:#eef5f1;border-left:3px solid var(--green);padding:12px 16px;border-radius:0 10px 10px 0;
+    margin:12px 0;font-size:14px}
+  .warn{background:#fdf5ec;border:1px solid #ecd9bd;color:#7a5227;border-radius:12px;padding:14px 18px;
+    font-size:13.5px;margin-top:20px}
+  .big{background:var(--green);color:#fff;border-radius:12px;padding:16px 20px;margin-top:18px;font-size:15px}
+  .big b{font-size:17px}
+  a{color:var(--green)}
+  .foot{margin-top:28px;color:#8b968f;font-size:12.5px;line-height:1.9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">XINGJI · ONE-TIME SETUP</div>
+  <h1>Token 一次配置，以后永不登录</h1>
+  <p class="sub">生成一次，粘贴一次。之后所有更新都是「双击 deploy.bat → 等它跑完」，不用 git、不用输账号密码、不用打开 GitHub 网页。</p>
+
+  <div class="card">
+    <h2><span class="num">1</span> 生成一个 Token（约 60 秒，只做这一次）</h2>
+    <ol>
+      <li>打开 <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">github.com/settings/tokens/new</a>（需要登录 GitHub 网页一次，仅此一次）。</li>
+      <li>Note 随便填，例如 <code>行迹部署</code>；Expiration 建议选 <code>No expiration</code> 或 90 天。</li>
+      <li>勾权限，见下面这两条，其余都不用勾：</li>
+    </ol>
+    <div class="chk">
+      ✅ <b><code>repo</code></b> —— 读写仓库文件<br>
+      ✅ <b><code>workflow</code></b> —— 上传 <code>.github/workflows/pages.yml</code>，少了它一定会被 GitHub 拒绝
+    </div>
+    <p style="margin:8px 0 0;color:#6c7a74;font-size:13.5px">用 fine-grained token 也可以：给这个仓库 <em>Contents: read/write</em>、<em>Workflows: read/write</em>、<em>Pages: read/write</em> 三项即可。</p>
+    <ol start="4">
+      <li>拉到最底点 <code>Generate token</code>，复制那串 <code>ghp_...</code>（只显示一次）。</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">2</span> 部署</h2>
+    <ol>
+      <li>把压缩包<strong>全部文件</strong>解压到一个空文件夹，<code>index.html</code> 与 <code>deploy.bat</code> 在同一层。</li>
+      <li>双击 <code>deploy.bat</code>，粘贴 Token（输入不显示），回车。</li>
+      <li>其余全自动：校验身份 → 没有就建仓库 <code>xingji-studio</code> → 一次提交推完 → Pages 设为 GitHub Actions → 触发部署 → 打印网址。</li>
+    </ol>
+    <div class="big"><b>完事。</b>等 1–3 分钟打开脚本给你的 <code>https://用户名.github.io/xingji-studio/</code>，收藏它。</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">3</span> 以后更新 / 换仓库 / 不想每次粘贴</h2>
+    <ol>
+      <li><b>改完城市数据再上线：</b>后台导出 <code>cities.full.js</code> / <code>plan-config.js</code> 覆盖到 <code>data/</code>，再双击一次 <code>deploy.bat</code>。脚本只上传真正变化的文件，没变化就不提交。</li>
+      <li><b>不想每次粘贴：</b>把 Token 单独存成同目录的 <code>token.txt</code>（纯文本一行）。它已写进 <code>.gitignore</code>，<strong>不会被上传</strong>。或者设环境变量 <code>GITHUB_TOKEN</code>。</li>
+      <li><b>换仓库名：</b>设 <code>GITHUB_REPO=用户名/别的名字</code>，或命令行跑 <code>python deploy.py --repo 用户名/别的名字</code>，或写进同目录 <code>repo.txt</code>。想用 <code>https://用户名.github.io/</code> 根地址，仓库名填 <code>用户名/用户名.github.io</code>，脚本会自动按根地址输出网址。</li>
+      <li><b>想先看看会传什么：</b><code>python deploy.py --dry-run</code>，不联网、不读 Token。</li>
+      <li><b>站点也要提供单文件预览版下载：</b><code>python deploy.py --include-single</code>（约 9 MB，默认跳过，本地双击用不着上传）。</li>
+    </ol>
+  </div>
+
+  <div class="warn">
+    <strong>Token 安全：</strong>它等同于你的仓库写权限，别发聊天、别贴截图、别提交进仓库。脚本只在内存与请求头里用它，所有报错文案都会把 Token 打码；万一误提交，立刻到 GitHub 的 Token 页点 Revoke 重新生成。网络受限时脚本会明确提示，可设 <code>HTTPS_PROXY</code> 或用 <code>--api-base</code> 指向可达的桥。
+  </div>
+
+  <p class="foot">
+    <a href="0_先看这个.html">← 先看这个</a> · <a href="README.md">README</a> · <a href="index.html">打开工作台</a><br>
+    脚本不安装任何依赖（Python 3.8+ 标准库），不修改你的 git 配置，不写注册表。<code>deploy.bat</code> 与 <code>deploy.py</code> 也会随站点一起上传，换电脑时从站点就能取回；本机凭据 <code>token.txt</code> / <code>repo.txt</code> 永远不会上传。
+  </p>
+</div>
+</body>
+</html>

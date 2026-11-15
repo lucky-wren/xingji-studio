@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行迹 · 先看这个</title>
+<style>
+  :root{--ink:#243b35;--paper:#f6f3ec;--green:#3f6f63;--clay:#c4703f;--line:#e3ddd1}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.75 -apple-system,BlinkMacSystemFont,"WenQuanYi Micro Hei","Microsoft YaHei",sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:48px 24px 80px}
+  .kicker{font-size:12px;letter-spacing:.24em;color:var(--clay);font-weight:700}
+  h1{font-size:34px;line-height:1.3;margin:10px 0 8px;letter-spacing:-.02em}
+  .sub{color:#6c7a74;margin:0 0 30px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin:16px 0;
+    box-shadow:0 6px 24px rgba(36,59,53,.05)}
+  h2{font-size:18px;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+  .num{width:26px;height:26px;border-radius:8px;background:var(--green);color:#fff;
+    font-size:13px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  ol{margin:0;padding-left:22px}
+  li{margin:7px 0}
+  code{background:#f1efe8;border-radius:6px;padding:2px 7px;font-size:13px;color:#8a4a24}
+  .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  a.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#fff;
+    background:var(--green);padding:11px 18px;border-radius:11px;font-weight:600;font-size:14px}
+  a.btn.alt{background:#fff;color:var(--green);border:1px solid var(--line)}
+  a.btn:hover{opacity:.9}
+  .warn{background:#fdf5ec;border:1px solid #ecd9bd;color:#7a5227;border-radius:12px;
+    padding:14px 18px;font-size:13.5px;margin-top:24px}
+  .foot{margin-top:34px;color:#8b968f;font-size:12.5px;line-height:1.9}
+  .foot a{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">XINGJI · STATIC WORKSPACE</div>
+  <h1>行迹 · 先看这个</h1>
+  <p class="sub">纯静态站点，无需服务器、无需数据库、无需构建命令。全部内容都在仓库里的文件，改文件 → 再跑一次 deploy.bat 即全站生效。</p>
+
+  <div class="card">
+    <h2><span class="num">1</span> 上线（只做一次：双击 → 粘 Token → 完事）</h2>
+    <ol>
+      <li>把本压缩包<strong>全部文件</strong>解压到一个空文件夹（<code>index.html</code> 和 <code>deploy.bat</code> 在同一层，不要套一层文件夹）。</li>
+      <li>第一次先在 <a href="TOKEN_GUIDE.html"><strong>TOKEN_GUIDE.html</strong></a> 生成一个 Token，勾 <code>repo</code> + <code>workflow</code>，复制那串 <code>ghp_...</code>。<strong>这一步是唯一一次需要打开 GitHub 网页</strong>。</li>
+      <li>双击 <code>deploy.bat</code>，粘贴 Token（输入不显示），回车。其余全自动：没有就建仓库 <code>xingji-studio</code> → 一次提交推完 → Pages 设为 GitHub Actions → 触发部署 → 打印网址。</li>
+      <li>等 1–3 分钟打开脚本给你的网址，收藏它。以后改完内容再双击一次即可，<strong>不用装 git、不用登录、不用记密码、不用手动选 Pages</strong>。</li>
+    </ol>
+    <p style="margin:12px 0 0;color:#6c7a74;font-size:13.5px">
+      仍然想用 git 也完全可以：<code>git add . &amp;&amp; git commit -m init &amp;&amp; git push</code>，再去 Settings → Pages 把 Source 选成 GitHub Actions，两条路结果一样。
+      <code>deploy.bat</code> 只依赖 Python 3.8+（系统自带标准库，不用 pip 装东西），不修改你的 git 配置。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">2</span> 改城市内容（日常维护）</h2>
+    <ol>
+      <li>打开 <code>admin.html</code>（或工作台顶栏「⋯ 更多 → ⚙ 后台管理」/ 侧栏「⚙ 后台管理」）→ 列表 / 搜索 / 筛选 / 详情 / 编辑 / 新增 / 删除 / 恢复 / 导入 / 去重 / <strong>🤖 AI 采编</strong>。<br><span style="color:#6c7a74;font-size:13px">城市数据集中在这里管理。点列表里的「详情」能看到该城<strong>全部字段</strong>，可直接修改保存；新增城市默认就带 12 落点 / 6 美食 / 3 住宿 / 4 交通，填名字即可，也可用 AI 一键检索生成。</span></li>
+      <li>右上角「↓ 导出 cities.full.js」与「↓ 导出 plan-config.js」→ 覆盖仓库 <code>data/</code> 里的同名文件 → 再双击一次 <code>deploy.bat</code>（脚本只上传变化的文件，没变化就不提交）。</li>
+      <li>部署工作流会先跑<strong>数据硬校验</strong>：结构错误直接红灯不部署；内容提醒只打印。过了才发布，不会把坏站推上线。</li>
+    </ol>
+    <p style="margin:12px 0 0;color:#6c7a74;font-size:13.5px">后台里的改动会立刻在<strong>你这台电脑</strong>上预览（同源 localStorage 草稿），但只有导出并 push 才对所有访客生效。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">3</span> 数据与成片怎么来的</h2>
+    <ol>
+      <li><code>data/national-cities.json</code>：410 城行政区划事实层（名称 / 省份 / 大区）。</li>
+      <li><code>data/cities.js</code>：36 城真实快照；<code>data/cities.full.js</code>：410 城可直接出行程的完整字段（374 城为结构化通用框架）。</li>
+      <li><code>data/plan-config.js</code>：品牌、配色、图标、背景图、逐城视觉覆盖、隐藏城、自定义城。</li>
+      <li>成片工作台 <code>film.html</code> 用一张 <code>durs[]</code> 时间轴推导出帧数、SRT 时间码、人声起点与打字机进度；逐帧调用同一个绘制函数在浏览器内编码，产物只有 <code>film.mp4</code>。不播放一遍再录、不按墙钟等待。</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">4</span> 生成一支成片</h2>
+    <ol>
+      <li>视频合成页底部点「✦ 导出成片」：当前页自动逐句合成人声、按 <code>durs[]</code> 逐帧编码，完成后直接下载 <code>film.mp4</code>，全程不跳页。</li>
+      <li>上方五段（内容 / 字幕 / 声音 / 时间轴 / 导出）点哪段，右侧同一块面板就定位到哪段；预览台始终原位，控制条横排在阶段时间轴上方。</li>
+      <li>改逐镜文案会即时重算时间轴；字幕可开关、字号字体颜色与位置可调，关闭时成片与 SRT 都不含字幕。</li>
+      <li>7 项硬校验全过才给下载。用 Chrome / Edge，通过 <code>http(s)://</code> 或 localhost 打开；需要手动调参时再打开下面的成片工作台。</li>
+    </ol>
+  </div>
+
+  <div class="links">
+    <a class="btn" href="index.html">▶ 打开工作台</a>
+    <a class="btn alt" href="TOKEN_GUIDE.html">🔑 Token 一次配置</a>
+    <a class="btn alt" href="film.html">成片工作台 · 手动调参</a>
+    <a class="btn alt" href="admin.html">⚙ 城市数据后台</a>
+    <a class="btn alt" href="使用说明.html">📖 使用说明</a>
+  </div>
+  <p style="margin:16px 0 0;color:#6c7a74;font-size:13.5px">
+    只想本地双击看：解压后<strong>只拿 <code>旅行灵感工作台.html</code> 这一个文件</strong>即可。完整行程、后台管理、410 城数据全在里面；
+    点「⚙ 后台管理」是整页切换、<strong>不请求第二个文件</strong>，后台的「↗ 返回工作台」能回来。发邮件、传网盘、放进单文件预览环境都不会报 NoSuchKey。
+  </p>
+
+  <div class="warn">
+    <strong>数据口径请照直看：</strong>36 城快照基准 2026-11-09；其余 374 城是「这一类地方」的结构化通用框架，落点不是具体景点、票价写「请核对」、坐标为示意点位，不编造真实景点、票价、营业时间与来源链接。出行前请按「灵感来源」页核对，或在后台逐城补真实内容。全站目前没有真实照片，图片字段是自备授权入口，留空时回落 emoji＋渐变。
+  </div>
+
+  <p class="foot">
+    详细文档：<a href="数据配置说明.md">数据配置说明</a> ·
+    <a href="AI采编说明.md">AI 采编说明</a> ·
+    <a href="TOKEN_GUIDE.html">Token 一次配置</a> ·
+    <a href="README.md">README</a><br>
+    校验命令（本地也可跑）：<code>python3 tools/validate_full_data.py</code> ·
+    <code>python3 tools/validate_plan_config.py</code>
+  </p>
+</div>
+</body>
+</html>

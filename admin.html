@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行迹 · 城市数据管理后台</title>
+<style>
+:root{
+  --nav:#1c2532; --nav2:#263243; --pri:#2f6f63; --pri2:#e7f2ef; --line:#e3e8ee;
+  --ink:#1c2533; --ink2:#5a6675; --mute:#8b96a5; --bg:#f4f6f9; --card:#fff;
+  --warn:#c2692f; --warnbg:#fff4e9; --danger:#c0392b; --dangerbg:#fdecea; --ok:#2f7d5b;
+  --radius:8px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font-family:inherit;font-size:13px;color:var(--ink)}
+button{cursor:pointer}
+a{color:var(--pri);text-decoration:none}
+.app{display:flex;height:100vh;overflow:hidden}
+/* ---------- 侧栏 ---------- */
+.side{width:220px;flex:0 0 220px;background:var(--nav);color:#cfd8e3;display:flex;flex-direction:column}
+.brand{padding:18px 18px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand b{display:block;font-size:16px;color:#fff;letter-spacing:1px}
+.brand small{font-size:11px;color:#8fa0b4}
+.side-menu{padding:10px 0;flex:1;overflow:auto}
+.side-menu .grp{font-size:10px;color:#6f8197;letter-spacing:1.5px;padding:12px 18px 5px}
+.side-menu button{display:block;width:100%;text-align:left;background:none;border:0;color:#cfd8e3;padding:9px 18px;font-size:13px;border-left:3px solid transparent}
+.side-menu button:hover{background:var(--nav2);color:#fff}
+.side-menu button.on{background:var(--nav2);color:#fff;border-left-color:#5bb59c}
+.side-foot{padding:12px 18px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:#8294a9}
+.side-foot a{color:#9fd6c5}
+/* ---------- 主区 ---------- */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.top{height:56px;flex:0 0 56px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 20px}
+.top h1{font-size:15px;margin:0;font-weight:650}
+.top .crumb{color:var(--mute);font-size:12px}
+.top .sp{flex:1}
+.badge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;background:var(--pri2);color:var(--pri);border:1px solid #cfe6df}
+.badge.gray{background:#f1f3f6;color:var(--ink2);border-color:var(--line)}
+.badge.warn{background:var(--warnbg);color:var(--warn);border-color:#f2d5b5}
+.badge.danger{background:var(--dangerbg);color:var(--danger);border-color:#f3c8c3}
+.btn{border:1px solid var(--line);background:#fff;padding:6px 12px;border-radius:6px;color:var(--ink2);white-space:nowrap}
+.btn:hover{border-color:var(--pri);color:var(--pri)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.pri:hover{background:#276054;color:#fff}
+.btn.danger{color:var(--danger);border-color:#f0c9c4}
+.btn.danger:hover{background:var(--dangerbg)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.view{flex:1;overflow:auto;padding:20px 22px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.card h2{font-size:14px;margin:0 0 12px;font-weight:650}
+.card h3{font-size:13px;margin:16px 0 8px;font-weight:650;color:var(--ink2)}
+.note{background:var(--pri2);border:1px solid #cfe6df;border-radius:6px;padding:10px 12px;color:#2c6155;font-size:12px;margin-bottom:14px}
+.note.warn{background:var(--warnbg);border-color:#f2d5b5;color:#8a4a1f}
+.note b{font-weight:650}
+/* ---------- 统计 ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.stat span{font-size:11px;color:var(--mute);display:block}
+.stat b{font-size:23px;display:block;margin-top:4px;color:var(--ink)}
+.stat i{font-style:normal;font-size:11px;color:var(--mute)}
+/* ---------- 工具条 ---------- */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.toolbar input[type=text],.toolbar input[type=search],.toolbar select{border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:#fff;height:32px}
+.toolbar input[type=text],.toolbar input[type=search]{min-width:210px}
+.toolbar .sp{flex:1}
+.hint{font-size:11px;color:var(--mute)}
+/* ---------- 表格 ---------- */
+.tbl-wrap{border:1px solid var(--line);border-radius:6px;overflow:auto;background:#fff}
+table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+table.tbl th{background:#f7f9fb;color:var(--ink2);font-weight:600;text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:1}
+table.tbl td{padding:8px 10px;border-bottom:1px solid #f0f2f5;vertical-align:middle}
+table.tbl tr:hover td{background:#fafcfb}
+table.tbl tr.is-hidden td{opacity:.55}
+.cell-city{display:flex;align-items:center;gap:8px;min-width:170px}
+.thumb{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;flex:0 0 28px}
+.cell-city b{font-weight:600}
+.cell-city small{display:block;color:var(--mute);font-size:10px}
+.acts{white-space:nowrap}
+.acts button{border:0;background:none;color:var(--pri);padding:2px 5px;font-size:12px}
+.acts button:hover{text-decoration:underline}
+.acts button.del{color:var(--danger)}
+.pager{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--ink2)}
+.pager .sp{flex:1}
+.empty{padding:30px;text-align:center;color:var(--mute)}
+/* ---------- 表单 ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 14px}
+.f label{display:block;font-size:11px;color:var(--ink2);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff}
+.f textarea{resize:vertical;min-height:56px}
+.f .sub{font-size:10px;color:var(--mute)}
+.sec-title{font-size:12px;font-weight:650;color:var(--ink2);margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.mini-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mini-tbl th{background:#f7f9fb;color:var(--ink2);font-weight:600;padding:6px;border:1px solid var(--line);text-align:left}
+.mini-tbl td{padding:3px;border:1px solid var(--line)}
+.mini-tbl input{width:100%;border:0;padding:4px 5px;background:transparent}
+.mini-tbl input:focus{outline:1px solid var(--pri);background:#fff}
+.rowbtns{display:flex;gap:4px;justify-content:center}
+.rowbtns button{border:0;background:#f1f3f6;border-radius:4px;color:var(--ink2);padding:1px 6px;font-size:11px}
+/* ---------- 抽屉 ---------- */
+.drawer-mask{position:fixed;inset:0;background:rgba(18,26,36,.42);display:none;z-index:40}
+.drawer-mask.open{display:block}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,94vw);background:#fff;z-index:41;transform:translateX(102%);transition:transform .2s;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.12)}
+.drawer.open{transform:none}
+.drawer-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.drawer-h b{font-size:15px}
+.drawer-h .sp{flex:1}
+.drawer-b{flex:1;overflow:auto;padding:16px 18px}
+.drawer-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:#fbfcfd}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:12.5px}
+.kv b{color:var(--ink2);font-weight:600}
+.kv div{word-break:break-all}
+/* ---------- 其它 ---------- */
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#1c2532;color:#fff;padding:9px 18px;border-radius:22px;opacity:0;transition:.22s;z-index:60;pointer-events:none;font-size:13px;max-width:80vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.logs{max-height:360px;overflow:auto}
+.log{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f0f2f5;font-size:12px}
+.log time{color:var(--mute);flex:0 0 132px}
+.log b{flex:0 0 90px;color:var(--pri)}
+.log span{color:var(--ink2)}
+.drop{border:1px dashed #b9c6d2;border-radius:6px;padding:14px;text-align:center;color:var(--ink2);background:#fafcfd}
+textarea.code{width:100%;min-height:150px;border:1px solid var(--line);border-radius:6px;padding:10px;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
+.foot-note{font-size:11px;color:var(--mute);margin-top:8px}
+@media(max-width:860px){.side{width:62px;flex-basis:62px}.side .brand b,.side .brand small,.side-menu .grp,.side-menu button span,.side-foot{display:none}.side-menu button{text-align:center;padding:10px 0}.view{padding:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>行迹 · 管理后台</b><small>CITY DATA CONSOLE</small></div>
+    <div class="side-menu" id="menu"></div>
+    <div class="side-foot">纯静态 · 数据存本机<br><a href="index.html">↗ 返回工作台</a></div>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <h1 id="title">概览</h1><span class="crumb" id="crumb">数据总览</span>
+      <span class="sp"></span>
+      <span class="badge" id="draftBadge">草稿已同步</span>
+      <button class="btn" onclick="saveAll(1)">💾 保存草稿</button>
+      <button class="btn pri" onclick="go('publish')">📤 发布 / 导出</button>
+    </div>
+    <div class="view" id="view"></div>
+  </div>
+</div>
+
+<div class="drawer-mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-h"><b id="drTitle">详情</b><span class="sp"></span><button class="btn sm" onclick="closeDrawer()">✕ 关闭</button></div>
+  <div class="drawer-b" id="drBody"></div>
+  <div class="drawer-f" id="drFoot"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="data/city-media.js"></script>
+<script src="data/cities.full.js"></script>
+<script src="data/plan-config.js"></script>
+<script src="data/national-cities.js"></script>
+<script src="config.js"></script>
+<script>
+/* =====================================================================
+   行迹 · 城市数据管理后台（纯静态 / 无后端 / 无外部依赖）
+   数据：data/cities.full.js（410 城完整规划） + data/plan-config.js（全站配置）
+   草稿：localStorage xj_admin_v1（后台状态） → 同步 xj_admin_draft_v1（工作台实时预览）
+   发布：导出 cities.full.js / plan-config.js → 覆盖仓库文件 → git push → 全站生效
+   ===================================================================== */
+var KEY = 'xj_admin_v1';
+var DRAFT_KEY = 'xj_admin_draft_v1';
+var PLAN_DRAFT_KEY = 'xj_plan_draft_v1';
+var RAW = (window.XJ_CITIES_FULL && window.XJ_CITIES_FULL.cities) || [];
+var META = window.XJ_CITIES_FULL || {};
+var NAT = window.XJ_NATIONAL || {};
+var REPO_CFG = window.XJ_PLAN_CONFIG || {};
+
+var MENU = [
+  ['grp','数据'],
+  ['overview','📊','概览'],['cities','🏙','城市管理'],['ai','🤖','AI 采编'],['dict','🗂','分类字典'],
+  ['grp','配置'],
+  ['theme','🎨','全站视觉'],['publish','📤','导入 / 导出'],['logs','📜','操作日志'],
+  ['grp','快捷'],
+  ['back','↗','返回工作台']
+];
+
+var SCENES = [
+  ['老城街区','老城区','1.5h','culture|walk|photo','老街巷与本地日常，适合不设目的地慢慢走'],
+  ['滨水步道','滨水一带','1.5h','view|photo|walk','沿水一侧的步行带，傍晚光线最好'],
+  ['本地市集','市集周边','1h','food|local|walk','早市或菜场，看本地人怎么买菜吃什么'],
+  ['城市博物馆','市中心','1.5h','museum|history|rain','先用一小时把这座城的来龙去脉捋清楚'],
+  ['观景高处','近郊','1h','view|photo','找一处能俯瞰全城的开放视角'],
+  ['夜间食街','老城区','2h','food|local|night','把没吃到的那几样集中在夜里补齐'],
+  ['文创书店街区','历史街区','1.5h','culture|shop|rain','适合午后放慢、躲雨或避晒的室内段'],
+  ['近郊自然段','近郊','半天','nature|view|dayTrip','留半天给城外的山或水，注意往返交通'],
+  ['老字号茶点','老城区','1h','food|local','坐下来吃一顿本地做法的早点或点心'],
+  ['历史建筑街区','历史街区','1.5h','culture|history|photo','看本地建筑与街巷格局，注意参观礼仪'],
+  ['城市公园','市中心','1h','nature|walk|kid','晨间或午后留白，节奏慢下来'],
+  ['夜景广场','新城片区','1h','night|view|photo','收尾一晚，看灯光与人流']
+];
+var ZONES = [['north','华北 / 中原 · 四季分明'],['northeast','东北 · 冬长夏凉'],
+  ['south','江南 / 华中 · 湿润多雨'],['coastal','沿海 · 海风与台风'],
+  ['plateau','高原 · 昼夜温差大'],['tropical','热带 · 全年夏装'],['northwest','西北 · 干燥温差大']];
+var ZONE_BUDGET = {north:[180,320,620],northeast:[190,330,640],south:[170,300,580],
+  coastal:[200,350,680],plateau:[180,320,620],tropical:[210,360,720],northwest:[160,290,560]};
+
+var S = null;
+var PAGE = {view:'overview', q:'', prov:'全部', region:'全部', status:'全部',
+  sort:'name', page:1, size:20, sel:{}, editId:null, draft:null};
+
+function esc(v){return String(v===undefined||v===null?'':v).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function now(){return new Date().toLocaleString('zh-CN',{hour12:false});}
+function toast(t){var e=document.getElementById('toast');e.textContent=t;e.classList.add('show');
+  clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show');},2400);}
+function $(id){return document.getElementById(id);}
+
+function defaultState(){
+  var provinces = (NAT.provinces||[]).map(function(p){return p.name;});
+  var regions = (NAT.regions||META.regions||[]).slice();
+  return {
+    version:1, cities:clone(RAW), hidden:[], edited:{}, logs:[],
+    dict:{provinces:provinces, regions:regions, zones:ZONES.map(function(z){return z[0];})},
+    theme:clone((REPO_CFG.theme)||{}),
+    seq:RAW.length
+  };
+}
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){var o=JSON.parse(raw);
+      if(o && Array.isArray(o.cities) && o.cities.length){ S=o; }
+    }
+  }catch(e){}
+  if(!S)S=defaultState();
+  S.hidden=S.hidden||[];S.edited=S.edited||{};S.logs=S.logs||[];
+  S.dict=S.dict||defaultState().dict;S.theme=S.theme||{};S.seq=S.seq||S.cities.length;
+}
+function log(action,target,detail){
+  S.logs.unshift({at:now(),action:action,target:target,detail:detail||''});
+  if(S.logs.length>200)S.logs.length=200;
+}
+/* 后台状态 → 工作台同源草稿（刷新工作台即可看到编辑，无需先发布） */
+function syncDraft(){
+  try{
+    var d={overrides:{},added:[],removed:S.hidden.slice()};
+    Object.keys(S.edited).forEach(function(id){
+      var c=S.cities.filter(function(x){return x.id===id;})[0];
+      if(c)d.overrides[id]=c;
+    });
+    S.cities.filter(function(c){return c.isNew;}).forEach(function(c){d.added.push(c);});
+    localStorage.setItem(DRAFT_KEY,JSON.stringify(d));
+    var p={};try{p=JSON.parse(localStorage.getItem(PLAN_DRAFT_KEY)||'{}');}catch(e){p={};}
+    p.theme=S.theme;localStorage.setItem(PLAN_DRAFT_KEY,JSON.stringify(p));
+    var b=$('draftBadge');if(b){b.textContent='草稿已同步 · '+Object.keys(d.overrides).length+' 覆盖 / '+d.added.length+' 新增 / '+d.removed.length+' 隐藏';}
+  }catch(e){console.warn('草稿同步失败',e);}
+}
+function saveAll(showMsg){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('✖ 本地存储写入失败：'+e.message);return;}
+  syncDraft();
+  /* 内嵌在 iframe.srcdoc 时把草稿回传父页，避免个别浏览器把 srcdoc 当成独立源 */
+  try{if(window.parent!==window)parent.postMessage({type:'xj_draft',raw:localStorage.getItem(KEY)},'*');}catch(e){}
+  if(showMsg)toast('✓ 已保存草稿；工作台刷新即可预览，发布后全站生效');
+}
+function find(id){for(var i=0;i<S.cities.length;i++)if(S.cities[i].id===id)return S.cities[i];return null;}
+function cityStatus(c){
+  if(S.hidden.indexOf(c.id)>=0)return ['已删除','danger'];
+  if(c.isNew)return ['新增',''];
+  if(c.baseline)return ['基线快照','gray'];
+  return ['通用框架','warn'];
+}
+function regionOf(c){return c.region||'华东';}
+function provinceOf(c){return c.prov||'—';}
+
+/* ---------------- 菜单 / 路由 ---------------- */
+function renderMenu(){
+  $('menu').innerHTML=MENU.map(function(m){
+    if(m[0]==='grp')return '<div class="grp">'+m[1]+'</div>';
+    return '<button class="'+(PAGE.view===m[0]?'on':'')+'" onclick="go(\''+m[0]+'\')">'+m[1]+' <span>'+m[2]+'</span></button>';
+  }).join('');
+}
+function go(v){
+  if(v==='back'){location.href='index.html';return;}
+  PAGE.view=v;PAGE.page=1;renderMenu();render();
+}
+function render(){
+  var t={overview:['概览','数据总览'],cities:['城市管理','全国城市 · 增删改查'],
+    dict:['分类字典','省份 / 大区 / 气候带'],theme:['全站视觉','主题 / 图标 / 背景'],
+    publish:['导入 / 导出','发布闭环'],logs:['操作日志','最近 200 条']}[PAGE.view]||['概览',''];
+  $('title').textContent=t[0];$('crumb').textContent=t[1];
+  ({overview:vOverview,cities:vCities,ai:vAI,dict:vDict,theme:vTheme,publish:vPublish,logs:vLogs})[PAGE.view]();
+  $('view').scrollTop=0;
+}
+
+/* ---------------- 概览 ---------------- */
+function vOverview(){
+  var gen=S.cities.filter(function(c){return !c.baseline&&!c.isNew;}).length;
+  var base=S.cities.filter(function(c){return c.baseline;}).length;
+  var added=S.cities.filter(function(c){return c.isNew;}).length;
+  var dups=duplicateGroups().length;
+  var spots=S.cities.reduce(function(a,c){return a+(c.spots?c.spots.length:0);},0);
+  $('view').innerHTML=
+   '<div class="note"><b>数据口径</b>：410 城全部内置且每城都有完整行程字段（12 落点 / 6 美食 / 3 住宿 / 4 交通）。'
+   +'其中 <b>36 城基线</b>在工作台里使用 <code>data/cities.js</code> 的抓取快照与真实景点坐标；'
+   +'其余 <b>374 城</b>是结构化通用行程框架：落点名为「这一类地方」、票价写「请核对」、坐标为示意点位，'
+   +'<b>不编造</b>真实景点 / 票价 / 营业时间 / 实测经纬度 / 来源链接。真实内容请在「城市管理」逐城编辑或批量导入。</div>'
+   +'<div class="stats">'
+   +stat('全国城市',S.cities.length,'含基线 '+base+' / 通用 '+gen+' / 新增 '+added)
+   +stat('省级行政区',(S.dict.provinces||[]).length,'大区 '+(S.dict.regions||[]).length+' 个')
+   +stat('行程落点',spots,'每城 12 个通用落点')
+   +stat('已删除',S.hidden.length,'软删除，可随时恢复')
+   +stat('重复组',dups,'按归一化城市名检测')
+   +stat('已编辑',Object.keys(S.edited).length,'草稿实时同步工作台')
+   +'</div>'
+   +'<div class="card"><h2>最近操作</h2><div class="logs">'+logRows(S.logs.slice(0,8))+'</div></div>'
+   +'<div class="card"><h2>上线闭环</h2>'
+   +'<p style="margin:0;color:var(--ink2)">① 在「城市管理」增删改查 → 每次操作自动存本机草稿，'
+   +'<b>刷新工作台即可预览</b>（同源 localStorage）。② 到「导入 / 导出」下载 '
+   +'<code>data/cities.full.js</code> 与 <code>data/plan-config.js</code>，覆盖仓库同名文件。'
+   +'③ <code>git push</code> → GitHub Actions 重新部署 → 所有访客生效。'
+   +'④ 草稿只存你这台电脑；不导出并 push，别人看不到改动。</p></div>';
+}
+function stat(label,n,sub){return '<div class="stat"><span>'+label+'</span><b>'+n+'</b><i>'+sub+'</i></div>';}
+function logRows(rows){
+  if(!rows.length)return '<div class="empty">暂无操作记录</div>';
+  return rows.map(function(l){return '<div class="log"><time>'+esc(l.at)+'</time><b>'+esc(l.action)
+    +'</b><span>'+esc(l.target)+(l.detail?' · '+esc(l.detail):'')+'</span></div>';}).join('');
+}
+
+/* ---------------- 城市管理（列表 / 筛选 / 分页 / 批量） ---------------- */
+/* 列表搜索清空：恢复全部城市，不残留筛选关键字 */
+function clearSearch(){PAGE.q='';PAGE.page=1;vCities();var q=document.getElementById('q');if(q)q.focus();}
+function filtered(){
+  var q=PAGE.q.trim().toLowerCase();
+  var arr=S.cities.filter(function(c){
+    var st=cityStatus(c)[0];
+    if(PAGE.prov!=='全部'&&provinceOf(c)!==PAGE.prov)return false;
+    if(PAGE.region!=='全部'&&regionOf(c)!==PAGE.region)return false;
+    if(PAGE.status!=='全部'){
+      if(PAGE.status==='已删除'&&st!=='已删除')return false;
+      if(PAGE.status==='基线快照'&&st!=='基线快照')return false;
+      if(PAGE.status==='通用框架'&&st!=='通用框架')return false;
+      if(PAGE.status==='新增'&&st!=='新增')return false;
+    }
+    if(q&&(c.name+c.prov+c.region+c.id+(c.tag||'')).toLowerCase().indexOf(q)<0)return false;
+    return true;
+  });
+  var k=PAGE.sort;
+  arr.sort(function(a,b){
+    if(k==='spots')return (b.spots||[]).length-(a.spots||[]).length;
+    if(k==='updated')return String(b.updated||'').localeCompare(String(a.updated||''));
+    return String(a[k]||'').localeCompare(String(b[k]||''),'zh-CN');
+  });
+  return arr;
+}
+function vCities(){
+  var arr=filtered(),pages=Math.max(1,Math.ceil(arr.length/PAGE.size));
+  if(PAGE.page>pages)PAGE.page=pages;
+  var rows=arr.slice((PAGE.page-1)*PAGE.size,PAGE.page*PAGE.size);
+  var provs=['全部'].concat((S.dict.provinces||[]).slice());
+  var regs=['全部'].concat((S.dict.regions||[]).slice());
+  $('view').innerHTML=
+   '<div class="note">全部 <b>'+S.cities.length+'</b> 城已内置完整行程。'
+   +'点「查看」看<strong>全部字段</strong>与逐日预览，点「编辑」改任何字段（含逐条落点 / 美食 / 住宿 / 交通 / 来源 / 元数据），'
+    +'点「删除」软删除可恢复。新增 / 导入 / AI 采编一律按<strong>归一化城市名</strong>去重，同名城不重复添加。</div>'
+   +'<div class="card"><div class="toolbar">'
+   +'<input type="search" id="q" placeholder="搜城市 / 省份 / 大区 / id" value="'+esc(PAGE.q)+'" oninput="PAGE.q=this.value;PAGE.page=1;vCities()">'
+   +(PAGE.q?'<button class="btn sm" title="清空搜索，显示全部城市" onclick="clearSearch()">✕ 清空</button>':'')
+   +'<select onchange="PAGE.prov=this.value;PAGE.page=1;vCities()">'+provs.map(function(p){return '<option '+(p===PAGE.prov?'selected':'')+'>'+esc(p)+'</option>';}).join('')+'</select>'
+   +'<select onchange="PAGE.region=this.value;PAGE.page=1;vCities()">'+regs.map(function(p){return '<option '+(p===PAGE.region?'selected':'')+'>'+esc(p)+'</option>';}).join('')+'</select>'
+   +'<select onchange="PAGE.status=this.value;PAGE.page=1;vCities()">'+['全部','基线快照','通用框架','新增','已删除'].map(function(p){return '<option '+(p===PAGE.status?'selected':'')+'>'+p+'</option>';}).join('')+'</select>'
+   +'<select onchange="PAGE.sort=this.value;vCities()">'
+   +[['name','按名称'],['prov','按省份'],['region','按大区'],['spots','按落点数'],['updated','按更新时间']]
+     .map(function(x){return '<option value="'+x[0]+'" '+(x[0]===PAGE.sort?'selected':'')+'>'+x[1]+'</option>';}).join('')+'</select>'
+   +'<span class="sp"></span><span class="hint">共 '+arr.length+' 条</span>'
+   +'<button class="btn pri" onclick="openEdit(null)">＋ 新增城市</button></div>'
+   +'<div class="toolbar">'
+   +'<button class="btn sm" onclick="selectAll(1)">全选本页</button>'
+   +'<button class="btn sm" onclick="selectAll(0)">取消选择</button>'
+   +'<button class="btn sm danger" onclick="bulkDelete()">删除选中</button>'
+   +'<button class="btn sm" onclick="bulkRestore()">恢复选中</button>'
+   +'<button class="btn sm" onclick="dedupe()">一键去重</button>'
+   +'<button class="btn sm" onclick="exportSelected()">↓ 导出选中 JSON</button>'
+   +'<span class="sp"></span><span class="hint">已选 '+Object.keys(PAGE.sel).length+' 条</span></div>'
+   +'<div class="tbl-wrap"><table class="tbl"><thead><tr>'
+   +'<th style="width:26px"></th><th>目的地</th><th>省份</th><th>大区</th><th>层级</th><th>状态</th>'
+   +'<th style="text-align:right">落点</th><th>更新</th><th>操作</th></tr></thead><tbody>'
+   +(rows.length?rows.map(cityRow).join(''):'<tr><td colspan="9" class="empty">没有匹配的城市，换个筛选条件试试</td></tr>')
+   +'</tbody></table></div>'
+   +'<div class="pager"><button class="btn sm" '+(PAGE.page<=1?'disabled':'')+' onclick="PAGE.page--;vCities()">‹ 上一页</button>'
+   +'<span>第 '+PAGE.page+' / '+pages+' 页</span>'
+   +'<button class="btn sm" '+(PAGE.page>=pages?'disabled':'')+' onclick="PAGE.page++;vCities()">下一页 ›</button>'
+   +'<select onchange="PAGE.size=+this.value;PAGE.page=1;vCities()">'
+   +[20,50,100,200].map(function(n){return '<option value="'+n+'" '+(n===PAGE.size?'selected':'')+'>每页 '+n+' 条</option>';}).join('')+'</select>'
+   +'<span class="sp"></span><span class="hint">排序 / 搜索 / 筛选 / 分页均为纯前端，刷新不丢筛选状态以外的草稿</span></div>'
+   +'</div>';
+}
+function cityRow(c){
+  var st=cityStatus(c),g=c.g||['#3f6f63','#8fb3a1'],hidden=st[0]==='已删除';
+  var acts=hidden
+    ? '<button onclick="restoreOne(\''+esc(c.id)+'\')">恢复</button>'
+    : '<button onclick="openView(\''+esc(c.id)+'\')">查看</button>'
+      +'<button onclick="openEdit(\''+esc(c.id)+'\')">编辑</button>'
+      +'<button class="del" onclick="deleteOne(\''+esc(c.id)+'\')">删除</button>';
+  return '<tr class="'+(hidden?'is-hidden':'')+'">'
+   +'<td><input type="checkbox" '+(PAGE.sel[c.id]?'checked':'')+' onchange="toggleSel(\''+esc(c.id)+'\',this.checked)"></td>'
+   +'<td><div class="cell-city"><span class="thumb" style="background:linear-gradient(145deg,'+esc(g[0])+','+esc(g[1])+')">'
+   +(c.image?'<img src="'+esc(c.image)+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px" alt="">':esc(c.emoji||'📍'))+'</span>'
+   +'<span><b>'+esc(c.name)+'</b><small>'+esc(c.id)+' · '+esc(c.tag||'')+'</small></span></div></td>'
+   +'<td>'+esc(c.prov)+'</td><td>'+esc(c.region)+'</td><td>'+esc(c.level||'prefecture')+'</td>'
+   +'<td><span class="badge '+st[1]+'">'+st[0]+'</span></td>'
+   +'<td style="text-align:right">'+(c.spots||[]).length+'</td>'
+   +'<td>'+esc(c.updated||'—')+'</td><td class="acts">'+acts+'</td></tr>';
+}
+function toggleSel(id,on){if(on)PAGE.sel[id]=1;else delete PAGE.sel[id];vCities();}
+function selectAll(on){
+  var arr=filtered().slice((PAGE.page-1)*PAGE.size,PAGE.page*PAGE.size);
+  arr.forEach(function(c){if(on)PAGE.sel[c.id]=1;else delete PAGE.sel[c.id];});vCities();
+}
+function exportSelected(){
+  var ids=Object.keys(PAGE.sel);
+  if(!ids.length){toast('请先勾选城市');return;}
+  var arr=S.cities.filter(function(c){return ids.indexOf(c.id)>=0;});
+  download('行迹_选中城市_'+arr.length+'.json',JSON.stringify({format:'xingji-cities',cities:arr},null,2));
+  log('导出',arr.length+' 座城市','选中导出');saveAll();toast('已导出 '+arr.length+' 座');
+}
+
+/* ---------------- 增删改查 ---------------- */
+/* 城市名归一化：去掉行政后缀，避免「阿勒泰 / 阿勒泰地区」「XX / XX市」
+   被当成两座城。工作台按名字选目的地，省份是属性而不是身份。 */
+function normCityName(s){
+  return String(s||'').trim().toLowerCase().replace(/\s+/g,'')
+    /* 不去「盟 / 旗」：内蒙古的「锡林郭勒盟」与「锡林郭勒」是事实层两个条目，
+       去掉后缀会把它们误判成重复城，也会让重复组检测凭空多出 2 组。 */
+    .replace(/(特别行政区|自治州|自治县|地区|市|县|区)$/,'');
+}
+function cityKey(c){return normCityName(c.name);}
+function duplicateGroups(){
+  var seen={},dups=[];
+  S.cities.forEach(function(c){
+    var k=cityKey(c);if(!k)return;
+    if(seen[k])dups.push([seen[k],c]);else seen[k]=c;
+  });
+  return dups;
+}
+function lookupProv(name){
+  var k=normCityName(name);if(!k)return '';
+  for(var i=0;i<S.cities.length;i++)if(cityKey(S.cities[i])===k)return String(S.cities[i].prov||'').trim();
+  var nat=(window.XJ_NATIONAL&&window.XJ_NATIONAL.cities)||[];
+  for(var j=0;j<nat.length;j++)if(normCityName(nat[j].name)===k)return String(nat[j].prov||'').trim();
+  return '';
+}
+
+function dedupe(){
+  var groups=duplicateGroups();
+  if(!groups.length){toast('✓ 当前没有重复城市');return;}
+  if(!confirm('检测到 '+groups.length+' 组重复，将保留每组先出现的城，删除后出现的城（软删除，可恢复）。继续？'))return;
+  groups.forEach(function(p){if(S.hidden.indexOf(p[1].id)<0)S.hidden.push(p[1].id);});
+  log('去重',groups.length+' 组','保留先出现者');saveAll();vCities();toast('已去重 '+groups.length+' 组');
+}
+function deleteOne(id){
+  var c=find(id);if(!c)return;
+  if(!confirm('确定删除「'+c.name+'（'+c.prov+'）」？\n软删除，可在列表里恢复；发布后对所有访客生效。'))return;
+  if(S.hidden.indexOf(id)<0)S.hidden.push(id);
+  log('删除',c.name,c.prov);saveAll();vCities();toast('已删除 '+c.name);
+}
+function bulkDelete(){
+  var ids=Object.keys(PAGE.sel).filter(function(id){return S.hidden.indexOf(id)<0;});
+  if(!ids.length){toast('请先勾选未删除的城市');return;}
+  if(!confirm('确定删除选中的 '+ids.length+' 座城市？可批量恢复。'))return;
+  ids.forEach(function(id){S.hidden.push(id);});
+  log('批量删除',ids.length+' 座','');PAGE.sel={};saveAll();vCities();toast('已删除 '+ids.length+' 座');
+}
+function restoreOne(id){S.hidden=S.hidden.filter(function(x){return x!==id;});
+  log('恢复',find(id)?find(id).name:id,'');saveAll();vCities();toast('已恢复');}
+function bulkRestore(){
+  var ids=Object.keys(PAGE.sel);if(!ids.length){toast('请先勾选');return;}
+  S.hidden=S.hidden.filter(function(x){return ids.indexOf(x)<0;});
+  log('批量恢复',ids.length+' 座','');PAGE.sel={};saveAll();vCities();toast('已恢复 '+ids.length+' 座');
+}
+function openView(id){
+  var c=find(id);if(!c)return;
+  var st=cityStatus(c);
+  var plan='';
+  for(var d=1;d<=3;d++){
+    plan+='<div style="margin:5px 0"><b>Day '+d+'</b> · ';
+    plan+=[0,1,2].map(function(i){var s=(c.spots||[])[(d-1)*3+i];return s?esc(s[0]):'—';}).join(' → ');
+    plan+='</div>';
+  }
+  function E(v){return (v===undefined||v===null||v==='')?'<span style="color:var(--mute)">（空，可在编辑里补）</span>':esc(v);}
+  function kv(k,v){return '<b>'+k+'</b><div>'+E(v)+'</div>';}
+  function mini(title,cols,arr){
+    arr=arr||[];
+    return '<div class="sec-title">'+title+'（'+arr.length+' 条）</div><div class="tbl-wrap">'
+     +'<table class="mini-tbl"><thead><tr>'+cols.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr></thead><tbody>'
+     +arr.map(function(r){return '<tr>'+r.map(function(v){return '<td>'+E(v)+'</td>';}).join('')+'</tr>';}).join('')
+     +'</tbody></table></div>';
+  }
+  var rows=[
+    ['ID',c.id],['城市名',c.name],['省份',c.prov],['大区',c.region],
+    ['英文副标 en',c.en],['层级 level',c.level],['数据层 tier',c.tier],
+    ['状态 / 来源',st[0]+' · '+(c.baseline?'data/cities.js 基线快照':(c.isNew?'后台新增':'data/cities.full.js 通用框架'))],
+    ['标语 tag',c.tag],['最佳季节 seasons',c.seasons],['建议天数 days',c.days],
+    ['气候描述 climate',c.climate],['气候带 climateZone',c.climateZone],
+    ['气候展示名 climateZoneLabel',c.climateZoneLabel],
+    ['预算 budget（经济/舒适/品质）',(c.budget||[]).join(' · ')],
+    ['中心坐标 center（纬度, 经度）',(c.center||[]).join(', ')],
+    ['视觉 emoji',c.emoji],['渐变 g',(c.g||[]).join(' → ')],['主色 a',c.a],
+    ['卡片图 / 封面图 image',c.image],
+    ['景点图 spotImage',c.spotImage],['美食图 foodImage',c.foodImage],
+    ['住宿 / 街区图 stayImage',c.stayImage],
+    ['标签 tags',(c.tags||[]).join('、')],
+    ['一句话印象 intro',c.intro],
+    ['落点 / 美食 / 住宿 / 交通 条数',(c.spots||[]).length+' / '+(c.food||[]).length+' / '+(c.stay||[]).length+' / '+(c.transport||[]).length],
+    ['数据来源 source',c.source],['数据口径 note',c.note],
+    ['内容状态 contentStatus',c.contentStatus],['可信度 confidence',c.confidence],
+    ['是否基线 baseline',c.baseline?'是（前台优先用 cities.js）':'否'],
+    ['更新时间 updated',c.updated||'未编辑']
+  ];
+  var artHtml=(function(){
+    var all=window.XJ_CITY_MEDIA||{},m=(all.cities&&all.cities[c.id])||{};
+    var builtin=/^(?:data:image\/(?:svg\+xml|png)|assets\/img\/(?:cities|scenes)\/)/;
+    function pick(v,fb){var s=String(v||'').trim();return (s&&!builtin.test(s))?s:(fb||'');}
+    var scn=m.scenes||{};
+    var items=[['封面 · 城市地标',pick(c.image,scn.cover)],['衣 · 街巷',scn.wear||''],
+      ['食 · 菜品',pick(c.foodImage,scn.food)],['住 · 院落',pick(c.stayImage,scn.stay)],
+      ['行 · 路桥',scn.route||''],['逐日 · 动线',pick(c.spotImage,scn.day)]];
+    return '<div class="sec-title">🖼 分镜配图（6 类题材 · 可替换）</div>'
+      +'<div class="note">下面是该城出厂内置的 6 类题材插画，视频分镜按栏目自动取用，无需逐镜配置。在「✎ 编辑全部字段」里填自备授权图片的相对路径即可覆盖，清空则回落到这里。</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:10px 0 16px">'
+      +items.map(function(it){
+          var raw=String(it[1]||'');
+          /* data URI 本身含逗号，不能按逗号切；只有自备图的多路径才取第一张 */
+          var u=/^data:/.test(raw)?raw:(raw.split(/[,，]/)[0]||'');
+          return '<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)">'
+            +(u?'<img src="'+esc(u)+'" alt="'+esc(it[0])+'" style="width:100%;height:104px;object-fit:cover;display:block">'
+                :'<div style="height:104px;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px">未配置</div>')
+            +'<div style="padding:6px 8px;font-size:11px;color:var(--ink2)">'+esc(it[0])+'</div></div>';
+        }).join('')+'</div>';
+  })();
+  $('drTitle').textContent='详情 · '+c.name+'（全部字段）';
+  $('drBody').innerHTML=
+    '<div class="note">这里列出该城<strong>全部 '+rows.length+' 项字段</strong>与全部明细数据。'
+   +'要修改请点底部「✎ 编辑全部字段」，编辑页逐项可改并逐行增删落点 / 美食 / 住宿 / 交通。</div>'
+   +artHtml
+   +'<div class="sec-title">① 全字段档案</div><div class="kv">'+rows.map(function(r){return kv(r[0],r[1]);}).join('')+'</div>'
+   +'<div class="sec-title">② 逐日行程预览（按 3 天 × 3 落点）</div>'+plan
+   +'<div class="sec-title">③ 全部落点（12 条 · 含名称 / 区域 / 时长 / 票价 / 标签 / 亮点）</div>'
+   +'<div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>名称</th><th>区域</th><th>时长</th><th>票价</th><th>说明</th></tr></thead><tbody>'
+   +(c.spots||[]).map(function(s,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(s[0])+'</td><td>'+esc(s[1])+'</td><td>'+esc(s[2])+'</td><td>'+esc(s[3])+'</td><td style="font-size:11px;color:var(--ink2)">'+esc(s[5]||'')+'</td></tr>';}).join('')
+   +'</tbody></table></div>'
+   +mini('④ 美食明细',['名称','说明','位置','参考价'],c.food)
+   +mini('⑤ 住宿区明细',['名称','说明','价位','适合'],c.stay)
+   +mini('⑥ 交通与提示',['条目'],(c.transport||[]).map(function(t){return [t];}))
+   +'<div class="foot-note">穿搭建议与「灵感来源」检索入口由工作台按气候带 / 省份实时生成，'
+   +'不属于城市静态字段，因此不在此编辑；改动落点、票价、说明后前台会立即跟着变。</div>';
+  $('drFoot').innerHTML='<button class="btn" onclick="closeDrawer()">关闭</button>'
+   +'<button class="btn pri" onclick="openEdit(\''+esc(c.id)+'\')">✎ 编辑全部字段</button>';
+  openDrawer();
+}
+function openDrawer(){$('mask').classList.add('open');$('drawer').classList.add('open');}
+function closeDrawer(){$('mask').classList.remove('open');$('drawer').classList.remove('open');PAGE.editId=null;PAGE.draft=null;}
+
+/* --- 新增 / 编辑：完整字段表单 --- */
+function blankCity(){
+  var name='',prov=(S.dict.provinces||[''])[0]||'',region=(S.dict.regions||['华东'])[0]||'华东';
+  var c={id:'c'+Date.now().toString(36),name:name,prov:prov,region:region,en:'',emoji:'📍',
+    g:['#3f6f63','#8fb3a1'],a:'#3f6f63',image:'',tag:'后台新增 · 待补内容',seasons:'四季皆宜',
+    days:'3 – 4 天',climate:'请按当地气候填写',climateZone:'north',budget:[180,320,620],
+    center:[34.0,108.0],intro:'',tags:[],spots:[],food:[],stay:[],transport:[],
+    level:'prefecture',tier:'index',contentStatus:'generated',confidence:'generated',
+    baseline:false,isNew:true,updated:now(),note:'后台新增，请按 schema 补齐真实内容'};
+  return c;
+}
+function templateSpots(name){
+  return SCENES.map(function(s,i){return [name+' · '+s[0],s[1],s[2],'请核对',s[3]+(i%7===3?'|rain':''),
+    '【通用建议】不是具体景点名称，出行前请换成当地实际地点并核对开放信息。'+s[4]+'。'];});
+}
+function openEdit(id){
+  var c=id?find(id):blankCity();
+  if(!c)return;
+  PAGE.editId=id;PAGE.draft=clone(c);
+  if(!id)applyTemplate(PAGE.draft,'新城');   /* 新增默认就是完整行程 */
+  if(!PAGE.draft.spots||!PAGE.draft.spots.length)PAGE.draft.spots=templateSpots(PAGE.draft.name||'新城');
+  if(!PAGE.draft.food)PAGE.draft.food=[];
+  if(!PAGE.draft.stay)PAGE.draft.stay=[];
+  if(!PAGE.draft.transport)PAGE.draft.transport=[];
+  $('drTitle').textContent=id?('编辑 · '+c.name):'＋ 新增城市';
+  renderEdit();
+  $('drFoot').innerHTML='<button class="btn" onclick="closeDrawer()">取消</button>'
+   +'<button class="btn" onclick="fillTemplate()">按通用模板补满</button>'
+   +'<button class="btn pri" onclick="saveEdit()">✓ 保存</button>';
+  openDrawer();
+}
+function renderEdit(){
+  var c=PAGE.draft;
+  var provs=(S.dict.provinces||[]).slice(),regs=(S.dict.regions||[]).slice();
+  function f(label,key,type,opts){
+    var v=key==='g0'?((c.g||[])[0]||''):key==='g1'?((c.g||[])[1]||''):(c[key]===undefined?'':c[key]);
+    if(type==='select')return '<div class="f"><label>'+label+'</label><select onchange="ef(\''+key+'\',this.value)">'
+      +opts.map(function(o){return '<option value="'+esc(o[0])+'" '+(String(o[0])===String(v)?'selected':'')+'>'+esc(o[1])+'</option>';}).join('')+'</select></div>';
+    if(type==='area')return '<div class="f" style="grid-column:1/-1"><label>'+label+'</label><textarea rows="2" oninput="ef(\''+key+'\',this.value)">'+esc(v)+'</textarea></div>';
+    var isC=['g0','g1','a'].indexOf(key)>=0;
+    return '<div class="f"><label>'+label+'</label>'
+      +(isC?'<div style="display:flex;gap:6px"><input type="color" value="'+esc(v||'#3f6f63')+'" onchange="ef(\''+key+'\',this.value)">':'')
+      +'<input type="'+(type||'text')+'" value="'+esc(v)+'" oninput="ef(\''+key+'\',this.value)">'
+      +(isC?'</div>':'')+'</div>';
+  }
+  $('drBody').innerHTML=
+   '<div class="note'+(c.baseline?' warn':'')+'">'
+   +(c.baseline?'<b>基线城提示</b>：此城在工作台里使用 <code>data/cities.js</code> 的抓取快照与真实景点坐标。'
+     +'在此编辑会生成覆盖层（<code>plan-config.js</code> 的 cityOverrides），前台以编辑后的内容为准；原基线文件不变，可随时恢复。'
+     :'通用框架城：落点名称是「这一类地方」，票价写「请核对」，坐标为示意点位。'
+     +'把具体景点、票价、营业时间换成真实内容后，这座城就能直接用于上线行程。')
+   +'</div>'
+   +'<div class="sec-title">① 基本信息</div><div class="grid">'
+   +f('ID（小写字母 / 数字 / - _）','id')
+   +f('城市名 *','name')+f('省份 *','prov','select',provs.map(function(x){return [x,x];}))
+   +f('大区 *','region','select',regs.map(function(x){return [x,x];}))
+   +f('层级','level','select',[['province','省级'],['prefecture','地市'],['county','县域 / 景区']].map(function(x){return [x[0],x[1]];}))
+   +f('英文副标','en')+f('标语 / 封面角标','tag')
+   +f('最佳季节','seasons')+f('建议天数','days')
+   +f('气候带','climateZone','select',ZONES.map(function(z){return [z[0],z[1]];}))
+   +f('预算（经济,舒适,品质）','budget','text')
+   +f('中心坐标（纬度,经度 · 示意）','center','text')
+   +f('标签（逗号分隔）','tags','text')
+   +f('一句话印象','intro','area')
+   +'</div>'
+   +'<div class="sec-title">② 视觉（图标 / 图片 / 配色，全部可配）</div><div class="grid">'
+   +f('emoji 角标','emoji')+f('渐变色 1','g0')+f('渐变色 2','g1')+f('主色','a')
+   +f('卡片图 / 封面图 URL（留空用渐变）','image')
+   +f('景点图 URL（可多张，逗号分隔）','spotImage')
+   +f('美食图 URL（可多张，逗号分隔）','foodImage')
+   +f('住宿 / 街区图 URL（可多张，逗号分隔）','stayImage')
+   +'</div>'
+   +spotEditor('③ 行程落点（名称 / 区域 / 时长 / 票价 / 标签 / 亮点）','spots',
+      ['名称','区域','时长','票价','标签','亮点'])
+   +spotEditor('④ 美食（名称 / 说明 / 位置 / 参考价）','food',['名称','说明','位置','参考价'])
+   +spotEditor('⑤ 住宿区（名称 / 说明 / 价位 / 适合）','stay',['名称','说明','价位','适合'])
+   +'<div class="sec-title">⑥ 交通与提示（每行一条）</div>'
+   +'<textarea class="code" style="min-height:90px" oninput="ef(\'transport\',this.value.split(\'\\n\').filter(function(x){return x.trim();}))">'
+   +esc((c.transport||[]).join('\n'))+'</textarea>'
+   +'<div class="sec-title">⑦ 元数据与来源（全部可改）</div><div class="grid">'
+   +f('数据层 tier','tier','select',[['index','index · 索引城'],['extended','extended · 扩展城'],['custom','custom · 自定义']])
+   +f('气候描述 climate','climate')
+   +f('气候展示名 climateZoneLabel','climateZoneLabel')
+   +f('内容状态 contentStatus','contentStatus')
+   +f('可信度 confidence','confidence')
+   +f('数据来源 source','source')
+   +f('数据口径 note','note','area')
+   +f('更新时间 updated','updated')
+   +'</div>'
+   +'<div class="foot-note">是否基线 baseline 由数据源决定，不在表单里改（避免前台优先级错乱）。'
+   +'穿搭建议与「灵感来源」检索入口由工作台按气候带 / 省份实时生成，不属于城市静态字段。'
+   +'保存会校验必填字段与「城市名 + 省份」唯一性；重复不会写入。</div>';
+}
+function ef(k,v){
+  var c=PAGE.draft;
+  if(k==='g0'||k==='g1'){var g=(c.g||['#3f6f63','#8fb3a1']).slice();g[k==='g0'?0:1]=v;c.g=g;return;}
+  if(k==='budget'){c.budget=String(v).split(/[,，\s]+/).map(Number).filter(function(x){return isFinite(x);}).slice(0,3);return;}
+  if(k==='center'){c.center=String(v).split(/[,，\s]+/).map(Number).filter(function(x){return isFinite(x);}).slice(0,2);return;}
+  if(k==='tags'){c.tags=String(v).split(/[,，、]+/).map(function(x){return x.trim();}).filter(Boolean);return;}
+  c[k]=v;
+}
+function spotEditor(title,key,cols){
+  var arr=PAGE.draft[key]||[];
+  return '<div class="sec-title">'+title+'（'+arr.length+' 条）</div>'
+   +'<div class="tbl-wrap" style="max-height:300px"><table class="mini-tbl"><thead><tr><th style="width:28px">#</th>'
+   +cols.map(function(x){return '<th>'+x+'</th>';}).join('')+'<th style="width:66px">操作</th></tr></thead><tbody>'
+   +arr.map(function(r,i){return '<tr><td>'+(i+1)+'</td>'
+     +cols.map(function(_,j){return '<td><input value="'+esc(r[j]===undefined?'':r[j])+'" oninput="efRow(\''+key+'\','+i+','+j+',this.value)"></td>';}).join('')
+     +'<td><div class="rowbtns"><button onclick="rowDel(\''+key+'\','+i+')">删</button>'
+     +'<button onclick="rowUp(\''+key+'\','+i+')">↑</button></div></td></tr>';}).join('')
+   +'</tbody></table></div><button class="btn sm" style="margin-top:6px" onclick="rowAdd(\''+key+'\','+cols.length+')">＋ 增加一行</button>';
+}
+function efRow(key,i,j,v){PAGE.draft[key][i][j]=v;}
+function rowAdd(key,n){PAGE.draft[key].push(new Array(n).fill(''));renderEdit();}
+function rowDel(key,i){PAGE.draft[key].splice(i,1);renderEdit();}
+function rowUp(key,i){if(i>0){var a=PAGE.draft[key];var t=a[i];a[i]=a[i-1];a[i-1]=t;}renderEdit();}
+/* 生成一份完整通用行程：12 落点 / 6 美食 / 3 住宿 / 4 交通。
+   工作台原来的「快速新增向导」被收编进后台后，新增城市默认就带这套内容，
+   用户只填城市名 + 省份即可得到能直接出行的完整规划，不用再点「补满」。 */
+function applyTemplate(c,name){
+  var n=name||c.name||'新城';
+  c.spots=templateSpots(n);
+  c.food=[[n+'本地风味小馆','点两道本地做法的家常菜，比景区餐厅稳','老城 / 本地小馆','请核对'],
+    [n+'街边早点','出炉即食的那几样，趁热吃','早市 / 老街','请核对'],
+    [n+'时令家常菜','按当季食材点，别只照着榜单吃','本地小馆','请核对'],
+    [n+'夜市小食','把小吃分散到夜里，别一顿吃完','夜市 / 食街','请核对'],
+    [n+'老字号点心','带一份回去，路上也能吃','老字号铺子','请核对'],
+    [n+'茶饮与甜品','午后歇脚，选本地口味','街边茶铺','请核对']];
+  c.stay=[[n+'老城 / 历史街区','景点与老店步行可达，晚上最方便','请核对','首次到访 · 慢游'],
+    [n+'交通枢纽周边','抵达与次日出发省事，连锁酒店多','请核对','换乘 · 预算'],
+    [n+'新城 / 商圈','酒店较新、选择多，适合亲子与连住','请核对','舒适 · 亲子']];
+  c.transport=['🚄 抵达：'+n+'站 / 高铁站或机场，具体班次出行前核对',
+    '🚗 市内以步行 + 打车 / 地铁为主；近郊段建议正规一日游或包车',
+    '🕐 博物馆与热门馆常需提前 1–3 天预约，节假日排队明显',
+    '☀️ 门票、营业与预约状态请按「灵感来源」页核对'];
+  c.budget=ZONE_BUDGET[c.climateZone]||[180,320,620];
+  c.intro=c.intro||('把'+n+'排成 3 天，不赶路。本页是【通用建议】生成的结构化行程框架：'
+    +'落点名称是「这一类地方」而不是具体景点，票价、营业时间、预约状态均需出行前核对，'
+    +'或在后台逐城替换为真实内容。');
+  return c;
+}
+function fillTemplate(){
+  applyTemplate(PAGE.draft,PAGE.draft.name||'新城');
+  renderEdit();toast('已按通用模板补满 12 落点 / 6 美食 / 3 住宿 / 4 交通');
+}
+function validateCity(c,editId){
+  if(!c.name||!String(c.name).trim())return '城市名必填';
+  if(!c.prov||!String(c.prov).trim())return '省份必填';
+  if(!c.region||!String(c.region).trim())return '大区必填';
+  if(!/^[a-z0-9_-]{2,40}$/.test(String(c.id)))return 'ID 只能用小写字母 / 数字 / - _，2–40 位';
+  for(var i=0;i<S.cities.length;i++){
+    var x=S.cities[i];
+    if(x.id===editId)continue;
+    if(x.id===c.id)return 'ID「'+c.id+'」已存在';
+    /* 归一化城市名 + 同省 才算重复；同名不同省是两座城。 */
+    if(cityKey(x)===cityKey(c)&&String(x.prov).trim()===String(c.prov).trim())
+      return '「'+c.name+'（'+c.prov+'）」已存在，请勿重复添加；要更新内容请到城市管理里编辑该城';
+  }
+  if(!Array.isArray(c.spots)||!c.spots.length)return '至少 1 个行程落点';
+  for(var j=0;j<c.spots.length;j++)if(!c.spots[j][0])return '第 '+(j+1)+' 个落点缺名称';
+  if(!Array.isArray(c.center)||c.center.length!==2||!isFinite(c.center[0])||!isFinite(c.center[1]))
+    return '中心坐标必须是「纬度,经度」两个数字';
+  return '';
+}
+function saveEdit(){
+  var c=PAGE.draft,editId=PAGE.editId;
+  c.name=String(c.name).trim();c.prov=String(c.prov).trim();c.region=String(c.region).trim();
+  var err=validateCity(c,editId);
+  if(err){toast('✖ '+err);return;}
+  c.updated=now();c.confidence='edited';c.contentStatus='edited';
+  if(editId){
+    for(var i=0;i<S.cities.length;i++)if(S.cities[i].id===editId){S.cities[i]=clone(c);break;}
+    S.edited[editId]=1;log('编辑',c.name,c.prov+' · '+(c.spots||[]).length+' 落点');
+  }else{
+    /* 只填名字就得到完整行程：把默认模板里的「新城」占位换成真实城市名，
+       不覆盖用户在表单里手工改过的字段（只替换占位串）。 */
+    var nm=String(c.name);
+    ['spots','food','stay'].forEach(function(k){
+      c[k]=(c[k]||[]).map(function(row){var a=row.slice();a[0]=String(a[0]).replace(/新城/g,nm);return a;});
+    });
+    c.transport=(c.transport||[]).map(function(s){return String(s).replace(/新城/g,nm);});
+    c.intro=String(c.intro||'').replace(/新城/g,nm);
+    c.tag='后台新增 · 完整通用行程';
+    c.isNew=true;S.cities.push(clone(c));S.seq++;S.edited[c.id]=1;
+    log('新增',c.name,c.prov+' · '+(c.spots||[]).length+' 落点');
+  }
+  saveAll();closeDrawer();vCities();toast('✓ 已保存「'+c.name+'」，工作台刷新即可预览');
+}
+
+/* ---------------- 分类字典 ---------------- */
+function vDict(){
+  function list(title,key,arr){
+    return '<div class="card"><h2>'+title+'（'+arr.length+'）</h2>'
+     +'<div class="toolbar"><input type="text" id="new_'+key+'" placeholder="新增名称"><button class="btn sm" onclick="dictAdd(\''+key+'\')">＋ 添加</button>'
+     +'<span class="sp"></span><span class="hint">改名 / 删除会同步到城市筛选与新增表单下拉</span></div>'
+     +'<div>'+arr.map(function(x,i){return '<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0f2f5">'
+       +'<input value="'+esc(x)+'" onchange="dictRename(\''+key+'\','+i+',this.value)" style="border:1px solid var(--line);border-radius:5px;padding:4px 8px;width:220px">'
+       +'<span class="sp"></span><button class="btn sm danger" onclick="dictDel(\''+key+'\','+i+')">删除</button></div>';}).join('')+'</div></div>';
+  }
+  $('view').innerHTML='<div class="note">省份 / 大区 / 气候带都是可配置字典，不是写死在代码里。'
+   +'新增省份后，城市管理与新增表单立刻出现该选项；删除前请确认没有城市仍在使用。</div>'
+   +list('省级行政区','provinces',S.dict.provinces||[])
+   +list('大区','regions',S.dict.regions||[])
+   +list('气候带','zones',S.dict.zones||[]);
+}
+function dictAdd(key){var el=$('new_'+key);var v=(el.value||'').trim();if(!v){toast('请输入名称');return;}
+  if((S.dict[key]||[]).indexOf(v)>=0){toast('已存在');return;}
+  S.dict[key].push(v);log('字典新增',key,v);saveAll();vDict();toast('已添加 '+v);}
+function dictRename(key,i,v){var old=S.dict[key][i];v=String(v).trim();if(!v||v===old)return;
+  if(key==='provinces')S.cities.forEach(function(c){if(c.prov===old)c.prov=v;});
+  if(key==='regions')S.cities.forEach(function(c){if(c.region===old)c.region=v;});
+  S.dict[key][i]=v;log('字典改名',key,old+' → '+v);saveAll();vDict();toast('已改名');}
+function dictDel(key,i){var v=S.dict[key][i];
+  var used=S.cities.filter(function(c){return (key==='provinces'&&c.prov===v)||(key==='regions'&&c.region===v)||(key==='zones'&&c.climateZone===v);}).length;
+  if(used&&!confirm('还有 '+used+' 座城市在使用「'+v+'」，仍要删除字典项吗？'))return;
+  S.dict[key].splice(i,1);log('字典删除',key,v);saveAll();vDict();toast('已删除');}
+
+/* ---------------- 全站视觉 ---------------- */
+var THEME_FIELDS=[['brandName','品牌主标题'],['brandSub','副标题'],['brandIcon','角标 emoji'],
+ ['brandImage','角标图片 URL'],['paper','页面底色'],['card','卡片底色'],['ink','主文字'],
+ ['ink2','次文字'],['mute','弱化文字'],['line','边框色'],['accent','主色'],
+ ['accent2','辅色'],['accentSoft','浅强调底'],['bgImage','页面背景图 URL'],
+ ['bgOverlay','背景遮罩 0–0.9'],['radius','圆角'],['font','字体栈']];
+function vTheme(){
+  $('view').innerHTML='<div class="note">这里改的每一项都写进 <code>plan-config.js</code> 的 theme；'
+   +'保存后工作台<b>刷新即生效</b>（同源草稿），导出并 push 后对所有访客生效。'
+   +'全部留空 = 回到第一版米纸底 + 深墨绿 + ⛰。仓库不内置真实照片，图片请填自备授权的相对路径或上传内嵌。</div>'
+   +'<div class="card"><h2>主题字段</h2><div class="grid">'
+   +THEME_FIELDS.map(function(f){
+     var v=S.theme[f[0]]===undefined?'':S.theme[f[0]];
+     var isColor=/color|paper|card|ink|line|accent/i.test(f[0]);
+     return '<div class="f"><label>'+f[1]+' <span class="sub">'+f[0]+'</span></label>'
+      +(isColor?'<div style="display:flex;gap:6px"><input type="color" value="'+esc(v||'#3f6f63')+'" onchange="themeSet(\''+f[0]+'\',this.value)">':'')
+      +'<input value="'+esc(v)+'" placeholder="留空 = 默认" oninput="themeSet(\''+f[0]+'\',this.value)">'
+      +(isColor?'</div>':'')+'</div>';
+   }).join('')+'</div>'
+   +'<div class="toolbar" style="margin-top:12px"><button class="btn pri" onclick="saveAll(1)">💾 保存并同步工作台</button>'
+   +'<button class="btn" onclick="themeReset()">↺ 恢复默认视觉</button></div></div>';
+}
+function themeSet(k,v){S.theme[k]=v;log('视觉',k,v||'(空)');saveAll();}
+function themeReset(){S.theme={};log('视觉','恢复默认','');saveAll();vTheme();toast('已恢复默认视觉');}
+
+/* ---------------- 导入 / 导出 / 发布 ---------------- */
+function vPublish(){
+  $('view').innerHTML=
+   '<div class="note"><b>发布闭环</b>：本机草稿只你可见 → 下载下面两个文件 → 覆盖仓库 '
+   +'<code>data/cities.full.js</code> / <code>data/plan-config.js</code> → <code>git push</code> → Actions 重新部署 → 全站生效。'
+   +'<code>data/cities.full.js</code> 必须与 <code>index.html</code> / <code>admin.html</code> 一起上传，只传页面会变成 0 城。</div>'
+   +'<div class="card"><h2>① 导出（发布用）</h2><div class="toolbar">'
+   +'<button class="btn pri" onclick="exportFull()">↓ cities.full.js（全国城市数据）</button>'
+   +'<button class="btn pri" onclick="exportPlan()">↓ plan-config.js（视觉 / 删除 / 覆盖层）</button>'
+   +'<button class="btn" onclick="exportBackup()">↓ 全量备份 JSON</button>'
+   +'<button class="btn" onclick="copyPublish()">📋 复制发布说明</button></div>'
+   +'<p class="foot-note">导出内容基于当前后台状态（含编辑、新增、软删除、字典、主题），可直接覆盖仓库同名文件。</p></div>'
+   +'<div class="card"><h2>② 导入（批量补真实数据）</h2>'
+   +'<div class="toolbar"><select id="impMode"><option value="merge">合并（同名同省覆盖）</option><option value="replace">整体替换</option></select>'
+   +'<span class="hint">JSON 数组 / {"cities":[...]}；或 CSV：名称,省份,大区</span></div>'
+   +'<textarea class="code" id="impText" placeholder="粘贴 JSON 或 CSV…"></textarea>'
+   +'<div class="toolbar" style="margin-top:8px"><button class="btn pri" onclick="doImport()">↑ 校验并导入</button>'
+   +'<button class="btn" onclick="importSample()">填入 CSV 示例</button>'
+   +'<span class="sp"></span><span id="impMsg" class="hint"></span></div>'
+   +'<p class="foot-note">导入按「城市名 + 省份」去重；缺字段的行会明确列出并跳过，不静默写坏数据。'
+   +'导入通用城自动补满 12 落点 / 6 美食 / 3 住宿 / 4 交通（均带【通用建议】）。</p></div>'
+   +'<div class="card"><h2>③ 数据校验（上线前自检）</h2>'
+   +'<div class="toolbar"><button class="btn" onclick="runCheck()">▶ 运行自检</button></div>'
+   +'<div id="checkOut" class="hint">尚未运行</div></div>';
+}
+function download(name,text,type){
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:type||'text/plain;charset=utf-8'}));
+  a.download=name;document.body.appendChild(a);a.click();a.remove();
+}
+function fullPayload(){
+  var p={title:META.title||'行迹 · 全国城市完整规划数据',version:(META.version||1)+1,
+    baseDate:META.baseDate||'',total:S.cities.length,
+    baselineCount:S.cities.filter(function(c){return c.baseline;}).length,
+    generatedCount:S.cities.filter(function(c){return !c.baseline;}).length,
+    disclaimer:META.disclaimer||'',regions:(S.dict.regions||[]).slice(),
+    provinces:(S.dict.provinces||[]).map(function(n){return {name:n,region:(findProvRegion(n)||''),count:S.cities.filter(function(c){return c.prov===n;}).length};}),
+    cities:S.cities.map(function(c){var o=clone(c);delete o.isNew;return o;})};
+  return p;
+}
+function findProvRegion(n){
+  var c=S.cities.filter(function(x){return x.prov===n;})[0];
+  return c?c.region:'';
+}
+function exportFull(){
+  var p=fullPayload();
+  var js='/* 行迹 · 全国城市完整规划数据 —— 由后台管理系统 admin.html 导出\n'
+   +'   覆盖仓库 data/cities.full.js → git push → 全站生效。\n'
+   +'   口径：不编造真实景点 / 票价 / 营业时间 / 实测经纬度 / 来源链接。*/\n'
+   +'window.XJ_CITIES_FULL = '+JSON.stringify(p)+';\n';
+  download('cities.full.js',js,'text/javascript;charset=utf-8');
+  log('导出','cities.full.js',S.cities.length+' 城');saveAll();toast('已导出 cities.full.js（'+S.cities.length+' 城）');
+}
+function exportPlan(){
+  var ov={};
+  Object.keys(S.edited).forEach(function(id){var c=find(id);if(c){var o=clone(c);delete o.isNew;ov[id]=o;}});
+  var cfg={version:(REPO_CFG.version||1)+1,baseDate:META.baseDate||'',theme:S.theme||{},
+    cityOverrides:ov,hiddenCityIds:S.hidden.slice(),customCities:[],
+    regions:(S.dict.regions||[]).slice(),sections:{},texts:{
+      genericNote:'【通用建议】不是具体景点名称，出行前请换成当地实际地点',
+      verifyNote:'票价、营业时间、预约状态请按「灵感来源」页出行前核对',footerNote:''}};
+  var js='/* 行迹 · 全站规划配置 —— 由后台管理系统 admin.html 导出\n'
+   +'   覆盖仓库 data/plan-config.js → git push → 全站生效。*/\n'
+   +'window.XJ_PLAN_CONFIG = '+JSON.stringify(cfg,null,2)+';\n';
+  download('plan-config.js',js,'text/javascript;charset=utf-8');
+  log('导出','plan-config.js',Object.keys(ov).length+' 覆盖 / '+S.hidden.length+' 隐藏');saveAll();
+  toast('已导出 plan-config.js');
+}
+function exportBackup(){
+  download('行迹_后台全量备份.json',JSON.stringify(S,null,2),'application/json;charset=utf-8');
+  log('导出','全量备份','');saveAll();toast('已导出备份');
+}
+function copyPublish(){
+  var t='1. 把下载的 cities.full.js / plan-config.js 放进仓库 data/ 目录（覆盖同名文件）\n'
+   +'2. git add data/cities.full.js data/plan-config.js && git commit -m "update city data" && git push\n'
+   +'3. GitHub Actions 重新部署后，所有访客看到新数据\n'
+   +'4. 本机 localStorage 草稿只影响你这台电脑，不 push 不会全站生效';
+  try{navigator.clipboard.writeText(t);toast('已复制发布说明');}catch(e){toast(t.slice(0,40)+'…');}
+  log('复制','发布说明','');saveAll();
+}
+function importSample(){
+  $('impText').value='示例新城A,浙江,华东\n示例新城B,四川,西南\n示例新城C,新疆,西北';
+  $('impMsg').textContent='已填入 3 行 CSV 示例，点「校验并导入」试试';
+}
+function parseImport(text){
+  var t=text.trim();if(!t)return {ok:false,msg:'内容为空',cities:[]};
+  if(t.charAt(0)==='['||t.charAt(0)==='{'){
+    var j;try{j=JSON.parse(t);}catch(e){return {ok:false,msg:'JSON 解析失败：'+e.message,cities:[]};}
+    var arr=Array.isArray(j)?j:(j.cities||j.extended||[]);
+    if(!Array.isArray(arr))return {ok:false,msg:'没找到城市数组',cities:[]};
+    return {ok:true,cities:arr,msg:''};
+  }
+  var lines=t.split(/\r?\n/),out=[];
+  lines.forEach(function(line,i){
+    var p=line.split(/[,，\t]/).map(function(x){return x.trim();});
+    if(p.length<2||!p[0])return;
+    var c=blankCity();
+    c.id='imp_'+Date.now().toString(36)+'_'+i;
+    c.name=p[0];c.prov=p[1];c.region=p[2]||(S.dict.regions||['华东'])[0];
+    c.tag='批量导入 · 通用框架';
+    c.spots=templateSpots(c.name);
+    c.food=[['本地风味小馆','点两道本地做法的家常菜','老城 / 本地小馆','请核对'],
+      ['街边早点','出炉即食的那几样','早市 / 老街','请核对']];
+    c.stay=[[c.name+'老城 / 历史街区','景点与老店步行可达','请核对','首次到访']];
+    c.transport=['🚄 抵达：'+c.name+'站，班次出行前核对','☀️ 门票与营业状态请核对'];
+    c.intro='把'+c.name+'排成 3 天，不赶路；本页为通用建议框架，出行前请核对开放信息。';
+    out.push(c);
+  });
+  return {ok:true,cities:out,msg:''};
+}
+function doImport(){
+  var p=parseImport($('impText').value);
+  var out=$('impMsg');
+  if(!p.ok){out.textContent='✖ '+p.msg;toast('✖ '+p.msg);return;}
+  if(!p.cities.length){out.textContent='✖ 没有可导入的城市';return;}
+  if($('impMode').value==='replace'){
+    if(!confirm('整体替换会清空当前 '+S.cities.length+' 座城市，确定？'))return;
+    S.cities=[];S.hidden=[];S.edited={};
+  }
+  var ok=0,fail=[];
+  p.cities.forEach(function(raw,i){
+    var c=clone(raw);
+    if(!c.id)c.id='imp_'+Date.now().toString(36)+'_'+i;
+    if(!c.spots||!c.spots.length)c.spots=templateSpots(c.name||'新城');
+    if(!c.food)c.food=[];if(!c.stay)c.stay=[];if(!c.transport)c.transport=[];
+    if(!c.g)c.g=['#3f6f63','#8fb3a1'];if(!c.a)c.a=c.g[0];
+    if(!c.center||!isFinite(c.center[0]))c.center=[34.0,108.0];
+    if(!c.climateZone)c.climateZone='north';
+    if(!c.budget)c.budget=[180,320,620];
+    c.isNew=true;c.updated=now();c.confidence='imported';c.contentStatus='imported';
+    var err=validateCity(c,null);
+    if(err){fail.push('第 '+(i+1)+' 条：'+err);return;}
+    var exist=null;
+    for(var k=0;k<S.cities.length;k++)if(S.cities[k].name===c.name&&S.cities[k].prov===c.prov){exist=S.cities[k];break;}
+    if(exist){var keepId=exist.id;S.cities[k]=Object.assign({},exist,c,{id:keepId});S.edited[keepId]=1;}
+    else{S.cities.push(c);S.edited[c.id]=1;}
+    ok++;
+  });
+  log('导入',ok+' 座',fail.length?'失败 '+fail.length+' 条':'');saveAll();
+  out.innerHTML='✅ 成功 <b>'+ok+'</b> 座'+(fail.length?'，跳过 '+fail.length+' 条：'+esc(fail.slice(0,3).join('；')):'');
+  toast('导入完成：成功 '+ok+' 座');vPublish();
+}
+function runCheck(){
+  var errs=[],warns=[];
+  var ids={},keys={};
+  S.cities.forEach(function(c,i){
+    if(!c.name)errs.push('#'+i+' 缺名称');
+    if(!c.prov)errs.push('#'+i+' 缺省份');
+    if(!/^[a-z0-9_-]{2,40}$/.test(String(c.id||'')))errs.push('#'+i+' id 非法：'+c.id);
+    if(ids[c.id])errs.push('id 重复：'+c.id);ids[c.id]=1;
+    var k=c.name+'|'+c.prov;if(keys[k])errs.push('重复城市：'+k);keys[k]=1;
+    if(!Array.isArray(c.spots)||c.spots.length<3)errs.push(c.name+' 落点不足 3 个');
+    if(!Array.isArray(c.food)||!c.food.length)errs.push(c.name+' 没有美食');
+    if(!Array.isArray(c.stay)||!c.stay.length)errs.push(c.name+' 没有住宿区');
+    if(!Array.isArray(c.transport)||!c.transport.length)errs.push(c.name+' 没有交通提示');
+    if(!Array.isArray(c.center)||c.center.length!==2)errs.push(c.name+' 中心坐标无效');
+    if(!c.baseline&&c.spots.some(function(s){return !/请核对|核对|按人均|免费|面议|按项目/.test(String(s[3]));}))
+      warns.push(c.name+' 含具体票价，请确认已核对来源');
+  });
+  S.hidden.forEach(function(id){if(!find(id))errs.push('隐藏列表里有不存在的 id：'+id);});
+  var html='<div class="note'+(errs.length?' warn':'')+'"><b>自检结果</b>：'
+   +(errs.length?'发现 '+errs.length+' 项错误':'结构校验全部通过')+' · '+warns.length+' 条提醒 · 共 '+S.cities.length+' 城</div>';
+  if(errs.length)html+='<div style="color:var(--danger);font-size:12px;max-height:200px;overflow:auto">'+errs.slice(0,30).map(esc).join('<br>')+'</div>';
+  if(warns.length)html+='<div style="color:var(--warn);font-size:12px;margin-top:8px;max-height:120px;overflow:auto">'+warns.slice(0,20).map(esc).join('<br>')+'</div>';
+  $('checkOut').innerHTML=html;
+  log('自检',errs.length?errs.length+' 项错误':'通过','');saveAll();
+  toast(errs.length?'自检发现 '+errs.length+' 项错误':'✓ 自检通过');
+}
+
+/* ---------------- AI 采编 ---------------- */
+/* 多源公开检索 → 交给模型整合 → 严格 JSON → 校验补齐 → 一键入库。
+   Token 只存本机；检索或接口不可达都明确提示，不静默假装成功。 */
+var AI={cfg:null,result:null,resultKind:null,wikiText:'',wikiSource:'',wikiFail:'',
+        retryBrief:false,lastGen:null,lastFail:null,busy:false,lastStatus:'',
+        modelList:null,modelsVerified:false,conn:''};
+/* 兜底配置仅在 config.js 未加载时出现；同样不含任何具体模型 ID */
+var AI_CFG=window.XJ_AI_CONFIG||{
+  providers:[{name:'魔塔 ModelScope',base:'https://api-inference.modelscope.cn/v1',tokenUrl:'https://modelscope.cn/my/myaccesstoken'}],
+  modelsPath:'/models',prefer:['qwen','glm','deepseek'],
+  wiki:'https://zh.wikipedia.org/w/api.php',bridge:'http://127.0.0.1:8791',
+  mode:'direct',timeoutMs:30000,temperature:0.3
+};
+function aiCfg(){
+  if(AI.cfg)return AI.cfg;
+  /* model 初始为空：只能由 GET /models 的接口返回或用户手动填写，绝不内置默认值 */
+  var d={provider:0,base:AI_CFG.providers[0].base,model:'',token:'',
+         mode:AI_CFG.mode,wikiOn:true,name:'',prov:''};
+  try{var s=JSON.parse(localStorage.getItem('xj_ai_cfg')||'null');if(s)for(var k in s)d[k]=s[k];}catch(e){}
+  AI.cfg=d;return d;
+}
+/* 统一算 base：本机桥模式忽略用户填的 base，避免直连地址残留 */
+function aiBase(c){
+  c=c||aiCfg();
+  return c.mode==='bridge' ? AI_CFG.bridge.replace(/\/$/,'')+'/v1'
+                           : String(c.base||AI_CFG.providers[0].base).replace(/\/$/,'');
+}
+function aiSave(){try{localStorage.setItem('xj_ai_cfg',JSON.stringify(aiCfg()));}catch(e){}}
+/* 下拉与「手动填模型 ID」写同一个字段，选/填任一边都同步另一边，避免显示打架 */
+function aiSetModel(v){
+  aiSet('model',v);
+  var m=document.getElementById('aiModelManual');if(m&&m.value!==v)m.value=v;
+  var sel=document.getElementById('aiModelSel');
+  if(sel&&sel.value!==v){if(![...sel.options].some(function(o){return o.value===v;}))sel.value='';else sel.value=v;}
+}
+function aiSet(k,v){
+  var c=aiCfg();c[k]=v;
+  if(k==='provider'&&+v===0){c.base=AI_CFG.providers[0].base;}
+  /* 换服务商 / 换 base / 换连接方式都清空已拉取列表，避免拿 A 家模型去调 B 家 */
+  if(k==='provider'||k==='base'||k==='mode'){AI.modelList=null;AI.modelsVerified=false;AI.conn='';}
+  aiSave();
+  if(['provider','mode'].indexOf(k)>=0)vAI();
+}
+/* 下拉只渲染接口真实返回的 ID；接口没返回时给占位，不拿内置列表冒充 */
+function aiModelOpts(){
+  if(!AI.modelList||!AI.modelList.length)return [['','⚠ 尚未从接口取到模型 · 点下方「↻ 刷新可用模型」']];
+  return AI.modelList.map(function(m){return [m.id,'✓ '+m.label];});
+}
+function aiStatus(msg,kind,actions){
+  AI.lastStatus=msg;AI.lastKind=kind||'';
+  var e=document.getElementById('aiStatus');
+  if(e)e.innerHTML='<div class="note'+(kind==='err'?' warn':'')+'" style="margin:0">'
+    +(kind==='ok'?'✓ ':kind==='err'?'✖ ':kind==='warn'?'⚠ ':'')+esc(msg)
+    +(actions?'<div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap">'+actions+'</div>':'')
+    +'</div>';
+}
+function aiInp(label,key,val,hint,pwd){
+  return '<div class="f"><label>'+label+'</label><input '+(pwd?'type="password"':'type="text"')
+    +' value="'+esc(val)+'" autocomplete="off" oninput="aiSet(\''+key+'\',this.value)">'
+    +(hint?'<small style="color:var(--mute);font-size:11px">'+esc(hint)+'</small>':'')+'</div>';
+}
+function aiSel(label,key,opts,val){
+  return '<div class="f"><label>'+label+'</label><select onchange="aiSet(\''+key+'\',this.value)">'
+   +opts.map(function(o){return '<option value="'+esc(o[0])+'" '+(String(o[0])===String(val)?'selected':'')+'>'+esc(o[1])+'</option>';}).join('')
+   +'</select></div>';
+}
+/* 只取错误里的可读部分：HTTP 码 + message 字段，不把 request_id / raw JSON 贴回页面 */
+function aiBrief(m){
+  var s=String(m||''),cut=s.indexOf('{');
+  var head=(cut>=0?s.slice(0,cut):s).trim();
+  var mm=s.match(/"message"\s*:\s*"([^"]{0,90})/);
+  return (head||'HTTP')+(mm?' · '+mm[1]:'');
+}
+/* 把上游的原始错误翻译成人话 + 可操作下一步 */
+function aiHumanError(e){
+  var m=String((e&&e.message)||e||''),code=(m.match(/HTTP\s*(\d{3})/)||[])[1]||'';
+  /* 超时必须最先判，避免把「模型没算完」误报成网络不可达。 */
+  if(/AI_TIMEOUT/i.test(m)){
+    var sec=(m.match(/AI_TIMEOUT\s*(\d+)/)||[])[1];
+    var what=(m.match(/AI_TIMEOUT\s+\d+\s+(.+)$/)||[])[1]||'';
+    var wait=sec?'（等待 '+(+sec/1000).toFixed(1)+' 秒）':'';
+    var T={
+      '模型列表':'模型列表拉取超时'+wait+'：GET /models 没在 modelsTimeoutMs 内返回。'
+        +'点「↻ 刷新可用模型」重试，或调大 config.js 的 modelsTimeoutMs；接口没实现 /models 时可在「手动填模型 ID」直接填一个。',
+      '最小推理':'连接测试的最小推理超时'+wait+'：模型连一句「可用」都没回。'
+        +'换一个更小/更快的模型，或调大 pingTimeoutMs；这不代表生成也会被卡住。',
+      '多源检索':'公开检索超时'+wait+'：已自动降级为模型自带知识，不阻断生成，结果会标注需人工核对。'
+        +'可调大 wikiTimeoutMs 或取消勾选「检索公开资料」。',
+      '完整生成':'生成超时'+wait+'：模型还没返回完整城市 JSON 就被中断。'
+        +'这不是网络或 CORS 问题，切「本机桥」不解决。可把 config.js 的 genTimeoutMs 调大、'
+        +'取消勾选「检索公开资料」减少输入、或换一个更快的模型重试。'
+    };
+    return T[what]||('请求超时'+wait+'（'+what+'）：调大 config.js 里对应的 *TimeoutMs 后重试，切本机桥不解决超时。');
+  }
+  if(/has no provider supported|no provider|model.*not.*found|model id/i.test(m))
+    return '模型 ID 不在当前服务列表。点「🔌 连接测试」或「↻ 刷新可用模型」'
+      +'从接口重新拉取当前可用模型；也可以在「手动填模型 ID」里填一个。接口说：'+aiBrief(m);
+  if(code==='401'||code==='403')
+    return 'Token 无效或账号未授权（HTTP '+code+'）。到 '+(AI_CFG.providers[aiCfg().provider]||{}).tokenUrl
+      +' 重新生成 Access Token，并确认已绑定阿里云账号、完成实名认证。';
+  if(code==='429')return '调用过于频繁（HTTP 429），稍等几秒再试。';
+  if(code==='400')
+    return '接口返回 400，最常见是模型 ID 不被支持。点「🔌 连接测试」从接口拉取当前可用模型。接口说：'+aiBrief(m);
+  if(/AbortError|signal is aborted|The user aborted a request|aborted/i.test(m))
+    return '请求被中断（AbortError），通常是生成时间超过上限。若「🔌 连接测试」显示正常，'
+      +'优先调大 config.js 的 genTimeoutMs 或换更快的模型；不要先去切本机桥。';
+  if(/Failed to fetch|NetworkError|TypeError|Load failed/i.test(m))
+    return '网络不可达或被浏览器 CORS 拦截（fetch 未发出）。若「🔌 连接测试」是绿的，'
+      +'说明 Token 与模型端点通，先确认这次是不是超时；确属 CORS 时把「连接方式」切到「本机桥」，'
+      +'运行 python3 tools/ai_bridge.py 后重试。';
+  return '调用失败：'+m.slice(0,180);
+}
+/* GET /models：拉当前真实可用模型，按 prefer 关键词排序（不含任何具体 ID），自动替换下拉 */
+async function aiFetchModels(){
+  var c=aiCfg();
+  if(!c.token)throw new Error('HTTP 401 请先填写 API Token');
+  var url=aiBase(c)+(AI_CFG.modelsPath||'/models');
+  var ms=AI_CFG.modelsTimeoutMs||12000,tm=aiTimeout(ms);
+  try{
+    var mh={'Authorization':'Bearer '+c.token};
+    if(c.mode==='bridge')mh['X-Target-Base']=String(c.base||AI_CFG.providers[0].base);
+    var r=await fetch(url,{signal:tm.signal,headers:mh});
+    if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,160));
+    var j=await r.json();
+    var ids=(j.data||j.models||[]).map(function(x){return typeof x==='string'?x:(x.id||x.name);})
+      .filter(function(x){return !!x;});
+    if(!ids.length)throw new Error('模型列表为空，接口可能不是 OpenAI 兼容格式');
+    var pref=AI_CFG.prefer||['qwen'];
+    function rank(x){var l=x.toLowerCase();for(var i=0;i<pref.length;i++)if(l.indexOf(pref[i])>=0)return i;return 99;}
+    ids.sort(function(a,b){return rank(a)-rank(b)||a.localeCompare(b);});
+    AI.modelList=ids.map(function(id){return {id:id,label:id};});
+    AI.modelsVerified=true;
+    if(ids.indexOf(c.model)<0){c.model=ids[0];aiSave();}
+    return ids;
+  }catch(e){throw aiWrapTimeout(e,tm,ms,'模型列表');}
+  finally{tm.done();}
+}
+/* 一次极小的推理请求，确认 Token + 模型 + 链路真的可用（不是只查列表） */
+async function aiPing(){
+  var c=aiCfg(),ms=AI_CFG.pingTimeoutMs||20000,tm=aiTimeout(ms);
+  try{
+    var ph={'Content-Type':'application/json','Authorization':'Bearer '+c.token};
+    if(c.mode==='bridge')ph['X-Target-Base']=String(c.base||AI_CFG.providers[0].base);
+    var r=await fetch(aiBase(c)+'/chat/completions',{method:'POST',signal:tm.signal,headers:ph,
+      body:JSON.stringify({model:c.model,temperature:0,stream:false,max_tokens:16,
+        messages:[{role:'user',content:'只回复两个字：可用'}]})});
+    if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,160));
+    var j=await r.json();
+    if(!j.choices||!j.choices[0]||!j.choices[0].message)throw new Error('响应不是 OpenAI 兼容格式');
+    return String(j.choices[0].message.content||'').trim();
+  }catch(e){throw aiWrapTimeout(e,tm,ms,'最小推理');}
+  finally{tm.done();}
+}
+async function aiRefreshModels(){
+  if(AI.busy)return;
+  AI.busy=true;aiStatus('正在拉取当前可用模型列表…');
+  try{
+    var ids=await aiFetchModels();
+    AI.conn='✓ '+ids.length+' 个可用模型';
+    aiStatus('✓ 已从接口拉取 '+ids.length+' 个当前可用模型，下拉只显示这批 ID；当前选中「'+aiCfg().model+'」。','ok');
+  }catch(e){
+    AI.modelList=null;AI.modelsVerified=false;
+    aiStatus('刷新失败：'+aiHumanError(e)
+      +'。不会用内置模型列表冒充接口返回；可点「↻ 刷新可用模型」重试，或在「手动填模型 ID」里填一个。','err');
+  }
+  finally{AI.busy=false;vAI();}
+}
+/* 🔌 连接测试：Token → /models → 最小推理，三段分别给结论 */
+async function aiTest(){
+  if(AI.busy)return;
+  var c=aiCfg();
+  if(!c.token){aiStatus('请先填 API Token（魔塔免费获取：'
+    +(AI_CFG.providers[c.provider]||{}).tokenUrl+'）','err');return;}
+  /* 连接测试本来就该是「第一步」：model 初始为空时由 /models 自动选定，
+     不反过来要求用户先去点「刷新可用模型」。 */
+  var oldModel=c.model;
+  AI.busy=true;
+  try{
+    aiStatus('① 正在验证 Token 并拉取当前可用模型…');
+    var ids;
+    try{ids=await aiFetchModels();}
+    catch(e){AI.conn='✖ 连接失败';aiStatus('① 连接失败：'+aiHumanError(e),'err');return;}
+    var newModel=aiCfg().model;
+    var swap=(oldModel&&oldModel!==newModel)
+      ? '（原「'+oldModel+'」不在当前服务列表，已自动换成「'+newModel+'」）' : '';
+    aiStatus('② Token 有效 · 当前 '+ids.length+' 个可用模型'+swap+' · 正在做一次最小推理…');
+    var t0=Date.now(),raw;
+    try{raw=await aiPing();}
+    catch(e){AI.conn='✖ 推理失败';aiStatus('② 推理验证失败：'+aiHumanError(e),'err');return;}
+    var dt=((Date.now()-t0)/1000).toFixed(1);
+    AI.conn='✓ 连接正常 · '+ids.length+' 模型 · '+dt+'s';
+    aiStatus('✓ 连接测试通过：Token 有效、模型「'+newModel+'」可用'+swap
+      +'、最小推理返回「'+raw.slice(0,20)+'」（'+dt+'s）。现在可以点「🔍 检索资料并生成」。','ok');
+  }finally{AI.busy=false;vAI();}
+}
+function vAI(){
+  var c=aiCfg(),p=AI_CFG.providers[c.provider]||AI_CFG.providers[0];
+  $('view').innerHTML=
+   '<div class="note">填城市名 → 按顺序尝试 <strong>'+(AI_CFG.wikiSources||[]).length
+   +' 个公开检索源</strong>（任一命中即停并如实标源）→ 交给 <strong>'+esc(p.name)
+   +'</strong> 的中文模型整合成完整行程数据 → 校验补齐 → 一键入库。'
+   +'Token 只存在这台电脑的 localStorage，不写进仓库、不随导出带走。'
+   +'AI 生成的票价 / 营业时间统一写「请核对」，并标记「AI 采编 · 待核对」，不会伪装成实测数据。</div>'
+   +'<div class="card"><h2>① 接口配置 <span style="font-size:12px;color:var(--mute);font-weight:400">'
+     +'模型清单不写死，由 GET '+esc(AI_CFG.modelsPath||'/models')+' 接口返回</span></h2><div class="grid">'
+   +aiSel('服务商','provider',AI_CFG.providers.map(function(x,i){return [i,x.name];}),c.provider)
+   +aiInp('接口地址 base','base',c.base,+c.provider===1?'填你自己的 /v1 地址':'由服务商提供；切到「本机桥」时自动改用桥地址')
+   +'<div class="f"><label>模型'+(AI.modelsVerified?'（✓ 接口返回 '+AI.modelList.length+' 个）':'（尚未从接口取到）')+'</label>'
+   +'<select id="aiModelSel" onchange="aiSetModel(this.value)">'
+   +aiModelOpts().map(function(o){return '<option value="'+esc(o[0])+'" '+(String(o[0])===String(c.model)?'selected':'')+'>'+esc(o[1])+'</option>';}).join('')
+   +'</select></div>'
+   +'<div class="f"><label>手动填模型 ID（接口不通时兜底）</label>'
+   +'<input id="aiModelManual" type="text" value="'+esc(c.model)+'" autocomplete="off" '
+     +'placeholder="不写死任何模型，填了就用这个值" oninput="aiSetModel(this.value)">'
+   +'<small style="color:var(--mute);font-size:11px">上面下拉只显示接口返回的 ID；这里可手动填，两个控件同步</small></div>'
+   +aiInp('API Token','token',c.token,p.tokenUrl?('免费获取：'+p.tokenUrl):'填你的密钥',true)
+   +aiSel('连接方式','mode',[['direct','浏览器直连'],['bridge','本机桥（CORS 不通时）']],c.mode)
+   +'</div>'
+   +'<div class="toolbar" style="margin-top:10px">'
+   +'<button class="btn pri" onclick="aiTest()">🔌 连接测试</button>'
+   +'<button class="btn ghost" onclick="aiExportStatus()">↓ 导出诊断</button>'
+   +'<button class="btn" onclick="aiRefreshModels()">↻ 刷新可用模型</button>'
+   +'<span class="sp"></span><span class="hint" id="aiConn">'+esc(AI.conn||'尚未测试连接')+'</span></div>'
+   +'<div class="foot-note"><strong>连接测试通过 ≠ 生成一定能跑完</strong>：测试只做一句「可用」的最小推理（约 3 秒）；'
+     +'「检索资料并生成」要先取公开资料、再让模型吐一整份城市 JSON，单独给 '
+     +Math.round((AI_CFG.genTimeoutMs||120000)/1000)+' 秒。超时会明确写「生成超时」，不会再说成 CORS；'
+     +'超时后还会用「精简提示」自动重试一次。'
+     +'<br>连接测试会依次验证：Token 有效 → <code>GET '+esc(AI_CFG.modelsPath||'/models')
+   +'</code> 拉取当前可用模型 → 一次最小推理。<strong>下拉只显示接口真实返回的 ID（✓ 前缀），本项目不内置任何模型表</strong>；'
+   +'接口没实现 / 网络不通时会明确提示，可手动填模型 ID，不会拿写死列表冒充。'
+   +'模型会下线或新增，所以换服务商、换地址后都要重新拉取。'
+   +'若浏览器直连被 CORS 拦，把连接方式切到「本机桥」，运行 <code>python3 tools/ai_bridge.py</code> 再测。</div></div>'
+   +'<div class="card"><h2>② 检索资料并生成 <span style="font-size:12px;color:var(--mute);font-weight:400">'
+     +'AI 不可用时也能离线出一份可编辑草稿</span></h2><div class="grid">'
+   +'<div class="f"><label>城市名 *</label><input id="aiName" type="text" value="'+esc(c.name)
+     +'" placeholder="例如：泉州 / 阿勒泰 / 汕头" autocomplete="off" oninput="aiSet(\'name\',this.value)"></div>'
+    +'<div class="f"><label>省份（可选，留空自动匹配）</label>'
+      +'<input id="aiProv" type="text" value="'+esc(c.prov)+'" placeholder="内置 410 城自动按全国索引匹配" '
+      +'autocomplete="off" oninput="aiSet(\'prov\',this.value)">'
+      +'<small style="color:var(--mute);font-size:11px" id="aiProvEcho">'
+      +(c.name?(lookupProv(c.name)?'✓ 自动匹配到：'+esc(lookupProv(c.name)):'不在内置索引，可手填省份'):'')+'</small></div>'
+   +'<div class="f"><label>检索公开资料</label><label style="display:flex;gap:8px;align-items:center;padding:6px 0">'
+     +'<input type="checkbox" '+(c.wikiOn?'checked':'')+' onchange="aiSet(\'wikiOn\',this.checked)">'
+     +'<span>按顺序尝试 '+(AI_CFG.wikiSources||[]).length+' 个公开检索源；全部不可达则自动降级为模型自带知识并明示</span></label></div>'
+   +'</div><div class="toolbar" style="margin-top:10px">'
+   +'<button class="btn pri" onclick="aiGenerate()">🔍 检索资料并生成</button>'
+   +'<button class="btn" onclick="aiLocalFallback()">📄 本地框架（离线可用）</button>'
+   +'<button class="btn" onclick="aiApply()">✓ 一键添加到城市库</button>'
+   +'<span class="sp"></span><span class="hint">生成后可在下方 JSON 里人工修正再添加</span></div>'
+   +'<div class="foot-note" style="margin-top:6px">「📄 本地框架」<strong>不调用模型、不检索</strong>，'
+     +'生成一份 12 落点 / 6 美食 / 3 住宿 / 4 交通的可编辑草稿，所有落点带【通用建议】，'
+     +'并明确标注「不是 AI 采编、不是真实景点」。AI 生成失败时不会偷偷用它冒充结果。'
+     +'本机桥模式下检索由 <code>tools/ai_bridge.py</code> 代理，不受浏览器 CORS 限制。</div>'
+   +'<div id="aiStatus" style="margin-top:12px">'+(AI.lastStatus
+      ?'<div class="note'+(AI.lastKind==='err'?' warn':'')+'">'+(AI.lastKind==='ok'?'✓ ':AI.lastKind==='err'?'✖ ':'')+esc(AI.lastStatus)+'</div>'
+      :'<div class="note">尚未生成。点「🔍 检索资料并生成」用 AI 采编，或点「📄 本地框架」离线出草稿。</div>')+'</div></div>'
+    +'<div class="card"><h2>批量补齐全国数据 <span style="font-size:12px;color:var(--mute);font-weight:400">'
+      +'把框架城逐城升级为真实内容</span></h2>'
+    +'<div class="note">410 城里除 36 座基线快照外，其余是按地域类型生成的结构化行程，'
+      +'不是实测 POI。批量补齐按「检索 → 模型整合 → 覆盖同名城」逐城升级，'
+      +'<strong>不会新增重复城</strong>，也<strong>只写入真正由模型生成的结果</strong>'
+      +'（本地框架或失败一律计为失败，不会把框架城冒充成 AI 升级）；'
+      +'跑完到「导入 / 导出」导出并 push 才对全站生效。'
+      +'免费接口有速率限制，建议先跑 10 城看效果。</div>'
+    +'<div class="toolbar" style="margin-top:10px">'
+    +'<button class="btn pri" onclick="aiBatch(10)">⚡ 批量补齐前 10 城</button>'
+    +'<button class="btn" onclick="aiBatch(0)">全部待补齐城</button>'
+    +'<button class="btn sm" onclick="aiBatchStop()">■ 停止</button>'
+    +'<span class="sp"></span><span class="hint" id="aiBatchHint">'
+      +(AIBATCH.running?('运行中 '+AIBATCH.done+'/'+AIBATCH.total):'尚未运行')+'</span></div></div>'
+   +'<div class="card"><h2>③ 结果预览（可直接改）</h2>'
+   +'<textarea class="code" id="aiJson" style="min-height:260px" oninput="aiJsonEdit(this.value)" placeholder="生成后会显示严格 JSON，可手工修正后点「一键添加」">'
+   +esc(AI.result?JSON.stringify(AI.result,null,2):'')+'</textarea></div>';
+}
+function aiTimeout(ms){
+  var ctl=new AbortController(),hit=false;
+  var t=setTimeout(function(){hit=true;ctl.abort();},ms);
+  return {signal:ctl.signal,timedOut:function(){return hit;},
+          done:function(){clearTimeout(t);}};
+}
+/* 把「本函数自己触发的超时」翻译成可识别错误，不让 aiHumanError 猜 */
+function aiWrapTimeout(e,tm,ms,what){
+  if(tm&&tm.timedOut())return new Error('AI_TIMEOUT '+ms+' '+(what||''));
+  return e;
+}
+/* 检索源按顺序尝试：任一成功即停并如实记录源名，全部失败才抛错让上层降级。
+   不把「已降级」写成「已检索」，也不拿模型自带知识冒充公开资料。 */
+async function aiWiki(name){
+  var c=aiCfg();
+  var srcs=(c.mode==='bridge')
+    ? [{name:'本机桥',kind:'bridge',base:AI_CFG.bridge.replace(/\/$/,'')}]
+    : (Array.isArray(AI_CFG.wikiSources)&&AI_CFG.wikiSources.length
+       ? AI_CFG.wikiSources.slice()
+       : [{name:'维基百科',kind:'mediawiki',base:AI_CFG.wiki}]);
+  /* 兼容只改 wiki 单个地址的旧配置 / 测试注入：替换第一源地址，不让多源列表把它盖掉 */
+  if(c.mode!=='bridge'&&AI_CFG.wiki&&srcs.length&&String(AI_CFG.wiki)!==String(srcs[0].base)){
+    srcs[0]={name:srcs[0].name+'（自定义地址）',kind:srcs[0].kind,base:AI_CFG.wiki};
+  }
+  var fails=[];
+  for(var i=0;i<srcs.length;i++){
+    var src=srcs[i],u='',ms=AI_CFG.wikiTimeoutMs||8000,tm=aiTimeout(ms);
+    if(src.kind==='bridge')u=src.base+'/wiki?name='+encodeURIComponent(name);
+    else if(src.kind==='rest')u=src.base+encodeURIComponent(name);
+    else u=src.base+'?action=query&prop=extracts&exintro=1&explaintext=1&format=json&origin=*&titles='
+             +encodeURIComponent(name);
+    try{
+      var r=await fetch(u,{signal:tm.signal});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      var j=await r.json(),pages=(j.query&&j.query.pages)||{},k=Object.keys(pages)[0];
+      var text=(pages[k]&&pages[k].extract)||j.extract||j.summary||'';
+      if(String(text).length<10)throw new Error('摘要为空');
+      AI.wikiSource=String(src.name);
+      return {text:String(text),source:String(src.name),tries:i+1};
+    }catch(e){
+      fails.push(src.name+'：'+aiBrief(String((e&&e.message)||e)).slice(0,60));
+    }finally{tm.done();}
+  }
+  AI.wikiSource='';AI.wikiFail='全部 '+srcs.length+' 个检索源不可用（'+fails.join(' / ')+'）';
+  throw new Error(AI.wikiFail);
+}
+function aiPrompt(c,wiki){
+  var shape={
+    name:'城市名',prov:'省份',region:'大区',en:'英文副标',emoji:'一个 emoji',
+    tag:'一句标语',seasons:'最佳季节',days:'建议天数',climate:'气候描述',
+    climateZone:'north|south|coastal|plateau 之一',climateZoneLabel:'气候展示名',
+    budget:[180,320,620],center:[39.9,116.4],intro:'一句话印象',
+    tags:['标签1','标签2'],
+    spots:[['落点名称','区域','1.5h','请核对','culture|walk','亮点说明']],
+    food:[['美食','说明','位置','请核对']],
+    stay:[['住宿区','说明','请核对','适合']],
+    transport:['交通提示1','交通提示2','交通提示3','交通提示4'],
+    level:'prefecture',tier:'index',source:'资料来源',note:'数据口径'
+  };
+  return '请为「'+c.name+'（'+c.prov+'）」生成一份可直接用于旅行行程的结构化城市数据。\n'
+   +'严格按这个 JSON 结构输出（只输出对象本身，不要解释、不要 markdown 代码块）：\n'
+   +JSON.stringify(shape,null,1)+'\n'
+   +'硬性要求：\n'
+   +'1) spots 恰好 12 条，每条 6 列 [名称,区域,时长,票价,标签,亮点]；food 6 条 4 列；stay 3 条 4 列；transport 4 条字符串。\n'
+   +'2) 优先写当地真实景点 / 街区 / 小吃名称；不确定的写通用场景并在亮点里带「【通用建议】」。\n'
+   +'3) 票价、营业时间、预约状态一律写「请核对」，禁止编造精确价格与开放时间。\n'
+   +'4) center 填 [纬度,经度] 两个数字，不确定就给该省大致中心；budget 是三个数字。\n'
+   +'5) 全部使用简体中文。\n'
+   +(wiki?'\n以下是公开检索到的资料，请据此整合（不要整段照抄）：\n'+wiki.slice(0,1800)
+         :'\n（本次没有检索到公开资料，请用你自己的知识生成，并在 note 里写明需人工核对。）\n');
+}
+/* 超时后用更短的提示重试：只要 6 落点 / 3 美食，输出 token 少得多，成功率明显更高。
+   缺的字段由 aiRows() 用【通用建议】模板补齐，并在状态里写明「自动补位」。 */
+function aiPromptBrief(c,wiki){
+  return '城市「'+String(c.name).trim()+'」。只输出一个严格 JSON 对象，不要解释、不要 markdown 代码块。'
+   +'字段：name, emoji, tag, seasons, days, climate, intro, tags, '
+   +'spots（只要 6 条，每条 ["名称","区域","1.5h","请核对","culture|walk","亮点"]）、'
+   +'food（只要 3 条，每条 ["名称","说明","位置","请核对"]）、stay（1 条）、transport（2 条）。'
+   +'优先写当地真实名称；不确定的写通用场景并在亮点里带「【通用建议】」。'
+   +(wiki?'公开资料：'+String(wiki).slice(0,600):'');
+}
+async function aiCall(c,wiki,brief){
+  var url=aiBase(c)+'/chat/completions';
+  /* 完整生成要吐一整份城市 JSON，单独给 2 分钟 */
+  var ms=AI_CFG.genTimeoutMs||120000,tm=aiTimeout(ms),t0=Date.now();
+  try{
+    var ch={'Content-Type':'application/json','Authorization':'Bearer '+c.token};
+    if(c.mode==='bridge')ch['X-Target-Base']=String(c.base||AI_CFG.providers[0].base);
+    var body={model:c.model,temperature:AI_CFG.temperature||0.3,stream:false,
+      messages:[{role:'system',content:'你是中文旅行行程数据编辑。只输出一个严格 JSON 对象，不要任何解释、不要 markdown 代码块、不要前后缀文字。'},
+                {role:'user',content:brief?aiPromptBrief(c,wiki):aiPrompt(c,wiki)}]};
+    if(brief)body.max_tokens=AI_CFG.briefMaxTokens||1200;
+    var r=await fetch(url,{method:'POST',signal:tm.signal,headers:ch,body:JSON.stringify(body)});
+    if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,160));
+    var j=await r.json();
+    if(!j.choices||!j.choices[0]||!j.choices[0].message)throw new Error('响应不是 OpenAI 兼容格式');
+    return j.choices[0].message.content;
+  }catch(e){
+    var w=aiWrapTimeout(e,tm,ms,'完整生成');
+    /* 诊断只留错误类型与 HTTP 码，不把整段响应体（含 request_id 的 raw JSON）又贴回页面 */
+    var em=String((e&&e.message)||e||''),cut=em.indexOf('{');
+    var brief=(cut>=0?em.slice(0,cut):em.slice(0,60)).trim()||'（无消息）';
+    AI.lastGen={ms:Date.now()-t0,limit:ms,url:url,model:c.model,
+      err:((e&&e.name)?e.name+': ':'')+brief,timeout:tm.timedOut()};
+    throw w;
+  }finally{tm.done();}
+}
+function aiParse(raw){
+  var t=String(raw||'').replace(/```json/gi,'').replace(/```/g,'').trim();
+  var a=t.indexOf('{'),b=t.lastIndexOf('}');
+  if(a<0||b<=a)throw new Error('响应里找不到 JSON 对象');
+  return JSON.parse(t.slice(a,b+1));
+}
+function aiRows(arr,n,cols,fill){
+  arr=Array.isArray(arr)?arr.slice(0,n):[];
+  while(arr.length<n)arr.push(fill[arr.length%fill.length].slice());
+  return arr.map(function(r){
+    var row=Array.isArray(r)?r.slice():[String(r)];
+    while(row.length<cols)row.push('');
+    return row.slice(0,cols);
+  });
+}
+function aiId(name){
+  var h=0;for(var i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;
+  return 'ai_'+h.toString(36)+'_'+Date.now().toString(36).slice(-4);
+}
+function aiNormalize(o,c,wiki){
+  var tmpl=applyTemplate(blankCity(),String(c.name).trim());
+  var keys=['id','name','prov','region','en','emoji','g','a','image','tag','seasons','days','climate',
+            'climateZone','climateZoneLabel','budget','center','intro','tags','spots','food','stay','transport',
+            'level','tier','source','note'];
+  var r={};keys.forEach(function(k){r[k]=(o&&o[k]!==undefined&&o[k]!==null)?o[k]:tmpl[k];});
+   r.name=String(c.name).trim();
+   /* 省份是行政区划事实：按城市名查内置索引，不让模型编、也不吃旧配置默认值 */
+   var autoProv=lookupProv(r.name);
+   r.prov=String(autoProv||c.prov||r.prov||'').trim();
+  if(!r.region)r.region=provinceOf(r.prov)||'华东';
+  if(!Array.isArray(r.g)||r.g.length<2)r.g=['#3f6f63','#8fb3a1'];
+  if(!Array.isArray(r.tags))r.tags=[];
+  if(!Array.isArray(r.budget)||r.budget.length<3)r.budget=[180,320,620];
+  if(!Array.isArray(r.center)||r.center.length!==2)r.center=[34.0,108.0];
+  r.spots=aiRows(r.spots,12,6,templateSpots(r.name));
+  r.food=aiRows(r.food,6,4,tmpl.food);
+  r.stay=aiRows(r.stay,3,4,tmpl.stay);
+  r.transport=(Array.isArray(r.transport)?r.transport.map(String):[]).slice(0,4);
+  while(r.transport.length<4)r.transport.push(tmpl.transport[r.transport.length]);
+   /* 用户在结果 JSON 里改的 id 要生效；没填 / 不合法才重新生成 */
+   if(!/^[a-z0-9_-]{2,40}$/.test(String(r.id||'')))r.id=aiId(r.name+'|'+r.prov);
+  r.tag='AI 采编 · 待核对';
+  r.baseline=false;r.isNew=true;
+  r.contentStatus='ai_generated';r.confidence='ai';
+  r.source=(wiki?((AI.wikiSource||'公开检索源')+' 摘要 + '):'')
+          +'模型 '+aiCfg().model+' 生成，需人工核对';
+  r.note='由 AI 依据公开资料与模型知识生成；票价 / 营业时间 / 预约状态为「请核对」，不是实测数据，出行前请核实并在后台替换为真实内容';
+  r.updated=now();
+  return r;
+}
+/* 本地通用框架：AI 完全不可用时的显式兜底。
+   必须用户点按钮才生成，且 tag / source / contentStatus 全部写明「不是 AI 采编」，
+   否则批量补齐会把它当 AI 升级覆盖现有城。 */
+function aiLocalMeta(r){
+  r.tag='本地框架 · 待补资料';
+  r.contentStatus='local_framework';r.confidence='generated';
+  r.source='本地通用框架（未调用模型、未检索到公开资料）';
+  r.note='这不是 AI 采编结果：'+String(r.note||'')+'。所有落点带【通用建议】，不是真实景点；'
+        +'票价、营业、预约均需出行前核对或在后台逐城替换。';
+  return r;
+}
+function aiLocalNormalize(o){
+  return aiLocalMeta(aiNormalize(o,aiCfg(),''));
+}
+/* 用户在结果 JSON 里改的每一个字符都要留下来：切模块 / 重绘 / 生成失败后回到这一页，
+   不能拿 AI.result 把未保存的编辑覆盖掉。编辑中途 JSON 不合法时不回写。 */
+function aiJsonEdit(v){
+  try{var o=JSON.parse(v);if(o&&typeof o==='object'&&!Array.isArray(o))AI.result=o;}
+  catch(e){/* 正在输入，暂不覆盖 */}
+}
+function aiLocalFallback(){
+  var c=aiCfg();
+  if(!c.name||!String(c.name).trim()){aiStatus('请先填城市名','err');return;}
+  var r=aiLocalMeta(aiNormalize(applyTemplate(blankCity(),String(c.name).trim()),c,''));
+  AI.result=r;AI.resultKind='local';AI.retryBrief=false;AI.wikiText='';AI.wikiSource='';
+  var box=document.getElementById('aiJson');if(box)box.value=JSON.stringify(r,null,2);
+  aiStatus('已生成「'+r.name+'」的本地通用框架：'+r.spots.length+' 落点 / '+r.food.length
+    +' 美食 / '+r.stay.length+' 住宿 / '+r.transport.length+' 交通。'
+    +'⚠ 这不是 AI 采编，全部是带【通用建议】的通用场景，不是真实景点。'
+    +'可改下方 JSON 后点「一键添加」；确认网络与模型后也可重试 AI 生成。','warn');
+}
+async function aiGenerate(){
+  if(AI.busy)return;
+  var c=aiCfg();
+  if(!c.name||!String(c.name).trim()){aiStatus('请先填城市名','err');return;}
+  if(!c.token){aiStatus('请先填 API Token（魔塔免费获取：'+(AI_CFG.providers[c.provider]||{}).tokenUrl+'）','err');return;}
+  if(!c.model){aiStatus('还没有模型：请先点「↻ 刷新可用模型」从接口拉取，或在「手动填模型 ID」里填一个。','err');return;}
+  AI.busy=true;AI.result=null;AI.resultKind=null;AI.wikiText='';AI.wikiSource='';
+  AI.retryBrief=false;AI.lastGen=null;AI.lastFail=null;AI.wikiFail='';
+  /* 清掉上一次的预览：失败时状态说「结果未生成」，下面还留着旧 JSON 会自相矛盾，
+     用户还可能把上一次的结果误点「一键添加」 */
+  var oldBox=document.getElementById('aiJson');if(oldBox)oldBox.value='';
+  var wiki='',wikiSrc='',wikiLine='① 已跳过检索（按你的设置使用模型自带知识）';
+  if(c.wikiOn){
+    aiStatus('① 正在按顺序尝试公开检索源…');
+    try{
+      var w=await aiWiki(c.name);wiki=w.text;wikiSrc=w.source;
+      wikiLine='① 命中「'+w.source+'」（第 '+w.tries+' 个源）· 摘要 '+wiki.length+' 字';
+    }catch(e){wiki='';AI.wikiFail=String((e&&e.message)||e||'检索源不可用');
+      wikiLine='① '+AI.wikiFail+'，改用模型自带知识，结果会标注需人工核对';}
+    AI.wikiText=wiki;
+    aiStatus(wikiLine+'，正在交给模型整合…','warn');
+  }else{aiStatus(wikiLine,'warn');}
+  var genSec=Math.round((AI_CFG.genTimeoutMs||120000)/1000);
+  aiStatus('② 正在调用 '+c.model+' 生成整份城市 JSON（最长等待 '+genSec+' 秒）…');
+  var raw=null,firstErr=null,firstGen=null;
+  try{raw=await aiCall(c,wiki);}
+  catch(e){
+    firstErr=e;firstGen=AI.lastGen||{};
+    /* 只有「超时」才自动精简重试：401 / 400 / CORS 重试没有意义，别白等一轮 */
+    if(/AI_TIMEOUT/.test(String((e&&e.message)||e||''))){
+      aiStatus('② 完整生成超时，正在用「精简提示」自动重试一次（只要 6 落点 / 3 美食，输出更短）…','warn');
+      try{raw=await aiCall(c,wiki,true);AI.retryBrief=true;}
+      catch(e2){firstErr=e2;raw=null;}
+    }
+  }
+  if(raw===null){
+    AI.busy=false;AI.conn='✖ 生成调用失败';
+    var g=firstGen||{},diag='';
+    AI.lastFail={at:new Date().toISOString(),stage:'generate',human:aiHumanError(firstErr),
+      wiki:wiki?(wikiSrc+' · ok '+wiki.length+' 字'):(AI.wikiFail||'未取到/已跳过'),
+      gen:g,retriedBrief:AI.retryBrief};
+    if(g.ms!=null)diag='【实测】耗时 '+(g.ms/1000).toFixed(1)+'s / 上限 '+(g.limit/1000).toFixed(1)
+      +'s · 模型 '+String(g.model||'')+' · 端点 '+String(g.url||'').slice(0,70)
+      +' · 原始错误 '+String(g.err||'');
+    var wshort=wiki?(wikiSrc+' 摘要 '+wiki.length+' 字'):'检索未取到，已降级为模型自带知识';
+    var extra=AI.retryBrief?' ｜ 已用精简提示重试一次，仍失败':'';
+    /* 失败绝不在结果 JSON 里塞假数据；给显式出口，用户自己选 */
+    var failBox=document.getElementById('aiJson');if(failBox)failBox.value='';
+    aiStatus(aiHumanError(firstErr)+(diag?' ｜ '+diag:'')+extra+' ｜ '+wshort
+      +'。下方结果未生成，不会用本地框架冒充 AI 采编。','err',
+      '<button class="btn sm pri" onclick="aiLocalFallback()">📄 改用本地框架（离线可用）</button>'
+      +'<button class="btn sm" onclick="aiGenerate()">↻ 重试 AI 生成</button>'
+      +'<button class="btn sm ghost" onclick="aiExportStatus()">↓ 导出诊断</button>');
+    return;
+  }
+  aiStatus('③ 正在解析并校验字段…');
+  var obj;
+  try{obj=aiParse(raw);}
+  catch(e){
+    AI.busy=false;AI.result=null;AI.resultKind=null;
+    var badBox=document.getElementById('aiJson');if(badBox)badBox.value='';
+    aiStatus('模型没返回可解析的 JSON：'+e.message+'。建议点「🔌 连接测试」换一个当前可用的中文模型。'
+      +'下方结果未生成，不会用本地框架冒充 AI 采编。','err',
+      '<button class="btn sm pri" onclick="aiLocalFallback()">📄 改用本地框架（离线可用）</button>'
+      +'<button class="btn sm" onclick="aiGenerate()">↻ 重试 AI 生成</button>');return;}
+  AI.result=aiNormalize(obj,c,wiki);AI.resultKind='ai';
+  var box=document.getElementById('aiJson');if(box)box.value=JSON.stringify(AI.result,null,2);
+  AI.busy=false;
+  var extraNote=AI.retryBrief?'（完整生成超时后由精简提示重试成功；模型少给的落点由【通用建议】模板补齐）'
+                             :'';
+  var srcNote=wikiSrc?('检索源：'+wikiSrc+'。')
+      :(c.wikiOn?((AI.wikiFail||'检索源全部不可用')+'，本次改用模型自带知识，结果需人工核对。')
+                :'已跳过检索，用模型自带知识。');
+  aiStatus('已生成「'+AI.result.name+'」：'+AI.result.spots.length+' 落点 / '+AI.result.food.length
+    +' 美食 / '+AI.result.stay.length+' 住宿 / '+AI.result.transport.length+' 交通。'
+    +srcNote+extraNote+'可改下方 JSON 后点「一键添加」。','ok');
+}
+/* 日志里如实写来源：本地框架不能记成「模型 xxx 生成」 */
+function aiVia(){
+  return AI.resultKind==='local'?'本地通用框架（未调用模型）':('模型 '+aiCfg().model);
+}
+/* 写入一条 AI 结果：同名城一律「覆盖升级」而不是再插一条。
+   保留原 id，才能命中工作台覆盖层 / 隐藏层，也避免截图里两个「阿勒泰」。 */
+function aiWrite(c,quiet){
+  var dup=null,di=-1;
+  for(var i=0;i<S.cities.length;i++)if(cityKey(S.cities[i])===cityKey(c)
+     &&String(S.cities[i].prov).trim()===String(c.prov).trim()){dup=S.cities[i];di=i;break;}
+  if(dup){
+    if(dup.baseline&&!quiet){
+      var ok=confirm('「'+dup.name+'」是基线真实快照，覆盖会替换它的真实景点数据。\n'
+        +'确定要用 AI 采编结果覆盖吗？（可取消后到城市管理里编辑）');
+      if(!ok)return {ok:false,msg:'已取消覆盖基线城'};
+    }
+    var keepId=dup.id,keepBaseline=!!dup.baseline;
+    var nc=clone(c);nc.id=keepId;nc.baseline=keepBaseline;nc.isNew=false;
+    S.cities[di]=nc;
+    S.edited[keepId]=1;S.seq++;
+    log('AI 覆盖升级',nc.name,nc.prov+' · '+nc.spots.length+' 落点 · '+aiVia());
+    saveAll();
+    if(!quiet){go('cities');openView(keepId);toast('✓ 已用 AI 结果升级「'+nc.name+'」，没有新增重复城');}
+    return {ok:true,mode:'updated',name:nc.name};
+  }
+  var err=validateCity(c,null);
+  if(err)return {ok:false,msg:'校验未通过：'+err};
+  S.cities.push(clone(c));S.seq++;S.edited[c.id]=1;
+  log('AI 新增',c.name,c.prov+' · '+c.spots.length+' 落点 · '+aiVia());
+  saveAll();
+  if(!quiet){go('cities');openView(c.id);toast('✓ 已把「'+c.name+'」添加到城市库');}
+  return {ok:true,mode:'created',name:c.name};
+}
+/* 诊断状态：对齐参考项目的 *_STATUS.json —— 刷新前的现场可一键导出，不丢证据 */
+function aiExportStatus(){
+  var c=aiCfg();
+  var o={
+    schema:'xingji-ai-status/1',at:new Date().toISOString(),
+    provider:String(c.provider||''),base:String(c.base||''),
+    mode:String(c.mode||''),model:String(c.model||''),
+    token:'***'+(String(c.token||'').slice(-4)||'(空)'),
+    verified:AI.modelsVerified,modelIds:(AI.modelList||[]).map(function(x){return x.id;}),
+    timeouts:{models:AI_CFG.modelsTimeoutMs,ping:AI_CFG.pingTimeoutMs,
+             wiki:AI_CFG.wikiTimeoutMs,gen:AI_CFG.genTimeoutMs},
+    wikiOn:!!c.wikiOn,wikiSources:(AI_CFG.wikiSources||[]).map(function(x){return x.name;}),
+    wikiSourceHit:AI.wikiSource||'',conn:AI.conn||'',lastFail:AI.lastFail||null,
+    resultKind:AI.resultKind||null,retriedBrief:!!AI.retryBrief,
+    result:AI.result?{name:AI.result.name,spots:AI.result.spots.length,
+                      food:AI.result.food.length,stay:AI.result.stay.length,
+                      tag:AI.result.tag,source:AI.result.source,
+                      contentStatus:AI.result.contentStatus}:null
+  };
+  var b=new Blob([JSON.stringify(o,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='AI_STATUS.json';a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1500);
+  aiStatus('已导出 AI_STATUS.json（Token 仅保留后 4 位）。把这个文件发回即可定位，不用手抄红字。','ok');
+}
+function aiApply(){
+  if(!AI.result){aiStatus('请先点「检索资料并生成」，或点「📄 本地框架」离线生成一份可编辑草稿','err');return;}
+  var c=AI.result,box=document.getElementById('aiJson');
+  if(box&&box.value.trim()){
+    try{
+      var o=JSON.parse(box.value);
+      /* 本地框架走自己的归一化，保留「不是 AI 采编」的全部标注 */
+      c=(AI.resultKind==='local')?aiLocalNormalize(o):aiNormalize(o,aiCfg(),AI.wikiText);
+    }
+    catch(e){aiStatus('预览 JSON 不是合法对象：'+e.message,'err');return;}
+  }
+  /* 一键添加必须显式拒绝重复，不能悄悄走「覆盖升级」——覆盖是批量补齐的能力。 */
+  var exist=null;
+  for(var i=0;i<S.cities.length;i++)if(cityKey(S.cities[i])===cityKey(c)
+     &&String(S.cities[i].prov).trim()===String(c.prov).trim()){exist=S.cities[i];break;}
+  if(exist){
+    aiStatus('✖ 「'+c.name+'（'+c.prov+'）」已存在，请勿重复添加；已为你打开该城详情，要改内容请点「编辑全部字段」。','warn');
+    go('cities');openView(exist.id);return;
+  }
+  var r=aiWrite(c,false);
+  var kindNote=(AI.resultKind==='local')?'（本地通用框架，不是 AI 采编；请在后台补齐真实内容）':'';
+  aiStatus(r.ok?('✓ 已新增「'+r.name+'」'+kindNote):('✖ '+r.msg), r.ok?'ok':'warn');
+}
+
+/* 批量补齐：把框架城逐城升级为带检索的真实内容。
+   用户本机连得上魔塔时跑完全部，导出 cities.full.js 并 push 即全站生效。 */
+var AIBATCH={running:false,stop:false,done:0,fail:0,total:0};
+async function aiBatch(limit){
+  if(AIBATCH.running){aiStatus('批量任务正在进行中','warn');return;}
+  var c=aiCfg();
+  if(!c.token||!c.model){aiStatus('请先填 Token 并点「🔌 连接测试」拉取可用模型','err');return;}
+  var targets=S.cities.filter(function(x){return !x.baseline && x.contentStatus!=='ai_generated';});
+  if(limit&&limit>0)targets=targets.slice(0,limit);
+  if(!targets.length){aiStatus('✓ 没有待补齐的框架城','ok');return;}
+  AIBATCH={running:true,stop:false,done:0,fail:0,total:targets.length};
+  aiStatus('批量补齐开始：共 '+AIBATCH.total+' 城，逐城检索 + 生成 + 覆盖升级…','warn');
+  for(var i=0;i<targets.length;i++){
+    if(AIBATCH.stop)break;
+    var nm=targets[i].name;
+    c.name=nm;c.prov=lookupProv(nm)||'';aiSave();
+    AI.result=null;AI.resultKind=null;
+    try{await aiGenerate();}catch(e){}
+    /* 双保险：本地框架/失败结果绝不写回城市，避免把 374 城冒充成「AI 升级」 */
+    if(AI.result&&AI.resultKind==='ai'){
+      var r=aiWrite(AI.result,true);
+      if(r.ok)AIBATCH.done++;else AIBATCH.fail++;
+    }else AIBATCH.fail++;
+    aiStatus('批量补齐 '+(i+1)+'/'+AIBATCH.total+' · 成功 '+AIBATCH.done+' · 失败 '+AIBATCH.fail
+      +' · 当前 '+nm+(AIBATCH.stop?'（已停止）':''),AIBATCH.stop?'warn':'ok');
+  }
+  AIBATCH.running=false;
+  aiStatus('批量补齐结束：成功 '+AIBATCH.done+' 城 / 失败 '+AIBATCH.fail+' 城。'
+    +'到「导入 / 导出」下载 cities.full.js 覆盖仓库并 push，全站访客即可看到真实内容。','ok');
+  log('AI 批量补齐',AIBATCH.done+' 成功',AIBATCH.fail+' 失败');saveAll();
+}
+function aiBatchStop(){if(AIBATCH.running){AIBATCH.stop=true;aiStatus('已请求停止，当前城完成后停下','warn');}}
+function aiBatchStatus(){return {running:AIBATCH.running,done:AIBATCH.done,fail:AIBATCH.fail,total:AIBATCH.total};}
+
+/* ---------------- 日志 ---------------- */
+function vLogs(){
+  $('view').innerHTML='<div class="card"><h2>操作日志（最近 200 条）</h2>'
+   +'<div class="toolbar"><span class="hint">每次增删改、导入、导出、视觉调整都会留痕</span>'
+   +'<span class="sp"></span><button class="btn sm danger" onclick="clearLogs()">清空日志</button></div>'
+   +'<div class="logs">'+logRows(S.logs)+'</div></div>';
+}
+function clearLogs(){if(!confirm('清空全部操作日志？'))return;S.logs=[];saveAll();vLogs();toast('已清空');}
+
+/* ---------------- 启动 ---------------- */
+load();renderMenu();syncDraft();render();
+window.XJ_ADMIN={state:function(){return S;},page:function(){return PAGE;},
+  go:go,save:saveAll,openEdit:openEdit,openView:openView,find:find,
+  filtered:filtered,validate:validateCity,exportFull:exportFull,exportPlan:exportPlan,
+  runCheck:runCheck,doImport:doImport,duplicateGroups:duplicateGroups,
+  aiGenerate:aiGenerate,aiApply:aiApply,aiCfg:aiCfg,aiNormalize:aiNormalize,
+  aiBatch:aiBatch,aiBatchStatus:aiBatchStatus,aiBatchStop:aiBatchStop,
+  aiWrite:aiWrite,normCityName:normCityName,cityKey:cityKey,lookupProv:lookupProv,
+  aiFetchModels:aiFetchModels,aiRefreshModels:aiRefreshModels,aiTest:aiTest,
+  aiModelOpts:aiModelOpts,aiSetModel:aiSetModel,aiHumanError:aiHumanError,
+  aiModels:function(){return AI.modelList;},aiVerified:function(){return AI.modelsVerified;},
+  aiConn:function(){return AI.conn;},aiLast:function(){return AI.result;},
+  aiStatus:function(){return AI.lastStatus;},aiSetStatus:aiStatus,
+  aiModelFromApi:function(){return {verified:AI.modelsVerified,ids:(AI.modelList||[]).map(function(m){return m.id;})};},
+  aiLastGen:function(){return AI.lastGen;},aiWikiFail:function(){return AI.wikiFail;},
+  aiLastFail:function(){return AI.lastFail;},aiLocalFallback:aiLocalFallback,
+  aiResultKind:function(){return AI.resultKind;},aiRetryBrief:function(){return AI.retryBrief;},
+  aiWikiSource:function(){return AI.wikiSource;},
+  aiExportStatusData:function(){
+    var c=aiCfg();return {resultKind:AI.resultKind,retriedBrief:AI.retryBrief,
+      wikiSourceHit:AI.wikiSource,wikiSources:(AI_CFG.wikiSources||[]).map(function(x){return x.name;}),
+      timeouts:{models:AI_CFG.modelsTimeoutMs,ping:AI_CFG.pingTimeoutMs,
+                wiki:AI_CFG.wikiTimeoutMs,gen:AI_CFG.genTimeoutMs},model:String(c.model||'')};},
+  aiBriefPrompt:aiPromptBrief,aiCall:aiCall,aiWiki:aiWiki};
+</script>
+</body>
+</html>

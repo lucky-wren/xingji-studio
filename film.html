@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>行迹 · 逐帧成片工作台</title>
+<style>
+:root{
+  --paper:#f5f2ea; --card:#fffdf8; --ink:#1e2a24; --ink2:#4a5a50; --mute:#8a9489;
+  --line:#e6e1d5; --clay:#c4703c; --moss:#6f8468;
+  --accent:#3f6f63; --accent2:#8fb3a1; --accent-soft:#e8f0eb;
+  --shadow:0 10px 32px rgba(30,42,36,.07); --shadow2:0 2px 10px rgba(30,42,36,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+a{color:var(--accent)}
+
+.top{height:66px;position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;padding:0 22px;
+  background:rgba(255,253,248,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand-mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;color:#fff;font-size:19px;box-shadow:0 4px 12px rgba(63,111,99,.28);flex:none}
+.brand b{font-size:16px;letter-spacing:.04em;white-space:nowrap}
+.brand small{display:block;color:var(--mute);font-size:11px;letter-spacing:.08em;margin-top:-3px}
+.top .sp{flex:1}
+body.embed .top{display:none}
+body.embed .wrap{padding-top:18px}
+body.embed .rail{top:8px}
+.pill{padding:6px 12px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:#fdf0e6;color:var(--clay);border:1px solid #f2d9c4}
+.ghost{border:1px solid var(--line);background:#fff;color:var(--ink2);padding:8px 13px;border-radius:10px;font-size:12.5px}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+.wrap{display:grid;grid-template-columns:96px minmax(360px,1fr) 430px;gap:18px;padding:20px 22px 60px;max-width:1560px;margin:0 auto;align-items:start}
+@media(max-width:1180px){.wrap{grid-template-columns:80px 1fr}.panel{grid-column:2}.preview{grid-column:2}}
+@media(max-width:760px){.wrap{grid-template-columns:1fr}.rail{grid-row:1;flex-direction:row!important;width:100%!important;overflow:auto}.rail button{min-width:92px}.panel,.preview{grid-column:1}}
+
+.rail{position:sticky;top:86px;display:flex;flex-direction:column;gap:8px}
+.rail .cap{font-size:10px;letter-spacing:.14em;color:var(--mute);text-align:center;padding:2px 0 6px}
+.rail button{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:11px 4px;
+  display:grid;place-items:center;gap:3px;color:var(--ink2);font-size:11px;transition:.18s;box-shadow:var(--shadow2)}
+.rail button i{font-style:normal;font-size:19px;line-height:1}
+.rail button:hover{border-color:var(--accent2);color:var(--accent)}
+.rail button.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(63,111,99,.25)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.card-h b{font-size:14px}
+.card-h .sub{color:var(--mute);font-size:11.5px;margin-left:auto}
+.card-b{padding:16px 18px}
+
+.stage{background:#243a32;border-radius:13px;overflow:hidden}
+.stage canvas{width:100%;height:auto;display:block;aspect-ratio:16/9;background:#f7f4ec}
+.stage canvas.portrait{aspect-ratio:9/16;max-height:560px;object-fit:contain;margin:0 auto}
+.phasebar{display:flex;gap:3px;margin-top:12px;height:12px}
+.phasebar span{flex:1;border-radius:4px;opacity:.5;transition:.2s;cursor:pointer}
+.phasebar span.on{opacity:1;box-shadow:0 0 0 2px var(--ink)}
+.ctrl{display:flex;align-items:center;gap:9px;margin-top:13px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:600;background:var(--accent);color:#fff}
+.btn.alt{background:#fff;border:1px solid var(--line);color:var(--ink2)}
+.btn:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{margin-left:auto;font-size:11.5px;color:var(--mute);text-align:right}
+.status b{color:var(--accent)}
+.note{font-size:11.5px;color:var(--mute);margin-top:12px;padding:10px 12px;background:#faf8f2;border:1px dashed var(--line);border-radius:10px}
+.note.warn{background:#fdf3ea;border-color:#f0d7bf;color:#8a5a33}
+
+.panel{position:sticky;top:86px;max-height:calc(100vh - 106px);overflow:auto;scroll-behavior:smooth;border-radius:18px}
+.panel::-webkit-scrollbar{width:7px}.panel::-webkit-scrollbar-thumb{background:#dcd6c8;border-radius:8px}
+.sec{padding:18px;border-bottom:1px solid var(--line);scroll-margin-top:6px;transition:background .5s}
+.sec.flash{background:#f0f7f2}
+.sec:last-child{border-bottom:0}
+.sec h3{margin:0 0 4px;font-size:14px;display:flex;align-items:center;gap:8px}
+.sec h3 em{font-style:normal;font-size:11px;font-weight:500;color:var(--mute);background:#f2efe7;border-radius:6px;padding:2px 7px}
+.sec p.desc{margin:0 0 14px;color:var(--mute);font-size:11.5px;line-height:1.55}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11.5px;color:var(--ink2);margin-bottom:5px;font-weight:600}
+.fld input[type=text],.fld textarea,.fld select{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink);font-size:12.5px;outline:none}
+.fld textarea{resize:vertical;min-height:58px;line-height:1.55}
+.fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1;min-width:0}
+.chip{padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:11.5px;color:var(--ink2)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mini{font-size:11px;color:var(--mute)}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.kv:last-child{border-bottom:0}.kv span{color:var(--mute)}.kv b{font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{color:var(--mute);font-weight:600;background:#faf8f2;position:sticky;top:0}
+.tbl td.txt{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl tr.on{background:var(--accent-soft)}
+
+.prog{height:9px;background:#eae5d9;border-radius:6px;overflow:hidden;margin:12px 0 6px}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .12s}
+.compile-cta{width:100%;padding:13px;font-size:13.5px;letter-spacing:.04em;border-radius:12px}
+.checks{display:grid;gap:5px;margin-top:10px}
+.check{display:flex;gap:8px;align-items:center;font-size:11.5px;padding:5px 9px;border-radius:8px;background:#faf8f2}
+.check.ok{background:var(--accent-soft);color:var(--accent)}
+.check.bad{background:#fdeceb;color:#a04430}
+.result{border:1px solid var(--accent2);border-radius:13px;padding:14px;margin-top:12px;background:#f6faf7}
+.result h4{margin:0 0 6px;font-size:13px}
+.result .dl{display:inline-block;margin-top:9px;padding:9px 15px;border-radius:10px;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;text-decoration:none}
+.scene-edit{border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:8px;background:#fff}
+.scene-edit label{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-bottom:4px}
+.scene-edit textarea{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 8px;font-size:12px;line-height:1.5;resize:vertical;min-height:50px}
+.toast{position:fixed;right:20px;bottom:20px;z-index:99;background:var(--ink);color:#fff;padding:10px 15px;border-radius:10px;font-size:12px;opacity:0;transition:.25s;pointer-events:none}
+.toast.on{opacity:1}
+
+/* ===== 工作台：5 段工具条与参数面板同在右侧一列（最终生效） ===== */
+.wrap{grid-template-columns:minmax(0,1fr) 430px!important;gap:14px 18px!important;
+ padding:14px 22px 60px!important;max-width:1560px;align-items:start}
+.rail{grid-column:1/-1;grid-row:1;position:sticky;top:76px;z-index:20;
+ flex-direction:row!important;gap:6px;background:#fff;border:1px solid var(--line);
+ border-radius:14px;padding:8px;box-shadow:var(--shadow);scroll-margin-top:80px}
+.preview{grid-column:1;grid-row:2;width:100%}
+.panel{grid-column:2;grid-row:2;position:static!important;top:auto!important;
+ max-height:none!important;overflow:visible!important;scroll-behavior:auto;width:100%;
+ scroll-margin-top:76px}
+.rail .cap{display:none}
+.rail button{flex:1;min-width:0;flex-direction:row;display:flex;align-items:center;justify-content:center;gap:5px;
+ padding:10px 4px;border-radius:10px;font-size:12px;box-shadow:none;border:1px solid var(--line)}
+.rail button i{font-size:15px}
+.rail button.on{background:var(--accent);border-color:var(--accent);color:#fff;
+ box-shadow:inset 0 -3px 0 rgba(255,255,255,.55),0 4px 12px rgba(63,111,99,.2)}
+.sec{display:none;scroll-margin-top:76px}
+.sec.on{display:block}
+@media(max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr) 360px!important}}
+@media(max-width:760px){.wrap{grid-template-columns:1fr!important;padding:10px 10px 50px!important}
+ .preview,.panel{grid-column:1;grid-row:auto}
+ .rail{grid-column:1;grid-row:1;flex-wrap:wrap}.rail button{flex:1 1 30%;font-size:11px}}
+</style>
+<script src="data/cities.js"></script>
+<script src="data/plan-config.js"></script>
+<script src="data/national-cities.js"></script>
+<script src="data/cities.full.js"></script>
+<script src="data/city-media.js"></script>
+<script src="scene-art.js"></script>
+<script src="config.js"></script>
+<script src="vendor/mp4-muxer.js"></script>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand-mark">✦</div>
+  <div class="brand"><b class="serif">行迹 · 逐帧成片工作台</b><small>TIMELINE COMPILER · film.mp4</small></div>
+  <div class="sp"></div>
+  <span class="pill ok" id="locPill">已定位：内容</span>
+  <span class="pill" id="audioPill">音轨：编译时自动选择</span>
+  <button class="ghost" onclick="backToWorkbench()">↩ 返回工作台</button>
+</div>
+
+<div class="wrap">
+  <nav class="rail" id="rail" aria-label="成片段落">
+    <div class="cap">段落</div>
+    <button class="on" data-sec="s1" onclick="go('s1','内容')"><i>✍</i>内容</button>
+    <button data-sec="s2" onclick="go('s2','画面')"><i>◈</i>画面</button>
+    <button data-sec="s3" onclick="go('s3','声音')"><i>♫</i>声音</button>
+    <button data-sec="s4" onclick="go('s4','时间轴')"><i>◷</i>时间轴</button>
+    <button data-sec="s5" onclick="go('s5','导出')"><i>↗</i>导出</button>
+  </nav>
+
+  <div class="preview">
+    <div class="card">
+      <div class="card-h"><b>预览台</b><span class="sub" id="resLabel">1280 × 720 · 24 fps</span></div>
+      <div class="card-b">
+        <div class="stage"><canvas id="cv" width="1280" height="720"></canvas></div>
+        <div class="phasebar" id="phasebar"></div>
+        <div class="ctrl">
+          <button class="btn" onclick="playPreview()">▶ 预览</button>
+          <button class="btn alt" onclick="pausePreview()">❚❚ 暂停</button>
+          <button class="btn alt" onclick="replayPreview()">↻ 重播</button>
+          <button class="btn alt" onclick="stopPreview()">■ 停止</button>
+          <span class="status" id="playStatus">静止 · <b id="clock">00:00.0</b> / <span id="totalLabel">0.0s</span></span>
+        </div>
+        <div class="note" id="previewNote">预览与成片读同一份 durs[]，不依赖机器快慢。</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><b>单一事实源</b><span class="sub">durs[] → frames[] → SRT / 音轨起点</span></div>
+      <div class="card-b">
+        <div class="kv"><span>镜数</span><b id="sumScenes">12</b></div>
+        <div class="kv"><span>总帧数</span><b id="sumFr">0 帧</b></div>
+        <div class="kv"><span>总时长</span><b id="sumDur">0.000 s</b></div>
+        <div class="kv"><span>SRT 条数</span><b id="sumSrt">12</b></div>
+        <div class="kv"><span>人声来源</span><b id="sumVoice">未合成</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card panel" id="panel">
+    <section class="sec on" id="s1">
+      <h3>① 内容 <em>一镜一源</em></h3>
+      <p class="desc">画面文字、字幕、SRT、朗读稿同源；改一句即重算时间轴。</p>
+      <div class="fld"><label>目的地</label><select id="citySel" onchange="changeCity(this.value)"></select></div>
+      <div class="row" style="margin-bottom:12px">
+        <div class="fld" style="margin:0"><label>画幅</label><select id="resSel" onchange="setRes(this.value)">
+          <option value="1280x720">横版 1280 × 720</option>
+          <option value="720x1280">竖版 720 × 1280</option>
+          <option value="640x360">轻量 640 × 360</option>
+        </select></div>
+        <div class="fld" style="margin:0"><label>帧率</label><select id="fpsSel" onchange="setFps(this.value)">
+          <option value="24">24 fps</option><option value="30">30 fps</option>
+        </select></div>
+      </div>
+      <div class="fld"><label>逐镜文案（每行一句，一镜一源）</label><div id="sceneEdits"></div></div>
+      <div class="fld"><label>打字机效果</label>
+        <div class="row">
+          <button class="chip on" id="twOn" onclick="setTw(true)">逐字打字机</button>
+          <button class="chip" id="twOff" onclick="setTw(false)">整句直接显示</button>
+        </div>
+      </div>
+      <div class="fld"><label>打字机速度 <span id="twSpeedLabel">1.0×</span></label><input type="range" id="twSpeed" min="0.4" max="2.4" step="0.2" value="1" oninput="setTwSpeed(this.value)"></div>
+    </section>
+
+    <section class="sec" id="s2">
+      <h3>② 画面 <em>drawScene(t) 唯一绘制</em></h3>
+      <p class="desc">预览与成片调用同一个绘制函数。</p>
+      <div class="fld"><label>字幕显示（导出跟随）</label><div class="row">
+        <button class="chip on" id="subOnBtn" onclick="setSubOn(true)">开启 · 导出含字幕</button>
+        <button class="chip" id="subOffBtn" onclick="setSubOn(false)">关闭 · 导出不含</button></div></div>
+      <div class="fld"><label>品牌水印文字</label><input type="text" id="wmText" value="行迹 · TRAVEL" oninput="setWm('text',this.value)"></div>
+      <div class="fld"><label>水印字号 <span id="wmSizeLabel">26 px</span></label><input type="range" id="wmSize" min="12" max="64" value="26" oninput="setWm('size',+this.value)"></div>
+      <div class="fld"><label>水印字体</label><select id="wmFontSel" onchange="setWm('font',this.value)">
+        <option value="default">默认无衬线</option><option value="serif">宋体 / 衬线</option>
+        <option value="kai">楷体</option><option value="round">圆体</option><option value="mono">等宽</option></select></div>
+      <div class="fld"><label>水印颜色</label><input type="color" id="wmColor" value="#3f6f63" oninput="setWm('color',this.value)"></div>
+      <div class="fld"><label>水印位置</label><select id="wmPos" onchange="setWm('pos',this.value)">
+        <option value="tr">右上</option><option value="tl">左上</option><option value="br">右下</option><option value="bl">左下</option>
+        <option value="none">不显示</option><option value="tile">斜向平铺</option>
+      </select></div>
+      <div class="fld"><label>水印透明度 <span id="wmAlphaLabel">70%</span></label><input type="range" id="wmAlpha" min="10" max="100" value="70" oninput="setWm('alpha',this.value)"></div>
+      <div class="fld"><label>正文字号 <span id="fontLabel">58 px</span></label><input type="range" id="fontSize" min="28" max="96" step="2" value="58" oninput="setFont(this.value)"></div>
+      <div class="note">配色取当前城市数据，与行程页一致。</div>
+    </section>
+
+    <section class="sec" id="s3">
+      <h3>③ 声音 <em>素材，不是时钟</em></h3>
+      <p class="desc">先逐句定人声时长写入 durs[]；试听不写时间轴。</p>
+      <div class="fld"><label>人声接口（LibreTTS）</label><input type="text" id="ttsBase" placeholder="https://libretts.is-an.org" onchange="setTtsBase(this.value)"></div>
+      <div class="fld"><label>音色 ID</label><input type="text" id="ttsVoice" value="zh-CN-XiaoxiaoNeural" onchange="state.voice=this.value"></div>
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn alt" onclick="previewVoice()">🔊 试听一句</button>
+        <button class="btn" onclick="synthVoices(true)">🎙 逐句合成（写入 durs[]）</button>
+      </div>
+      <div class="note" id="voiceNote">尚未合成。接口不可达时会明确写明，并用占位音轨出片，不伪装成真人声。</div>
+      <div class="fld" style="margin-top:14px"><label>主输出 <span id="gMaster">100%</span></label><input type="range" id="rgMaster" min="0" max="100" value="100" oninput="setGain('master',this.value)"></div>
+      <div class="fld"><label>人声 <span id="gVoice">100%</span></label><input type="range" id="rgVoice" min="0" max="100" value="100" oninput="setGain('voice',this.value)"></div>
+      <div class="fld"><label>配乐 <span id="gMusic">0%</span></label><input type="range" id="rgMusic" min="0" max="100" value="0" oninput="setGain('music',this.value)"></div>
+      <div class="row" style="margin-bottom:10px"><button class="btn alt" id="bgmTryBtn" onclick="previewBgm()">▶ 试听配乐</button>
+        <label class="btn alt" style="text-align:center">↑ 上传配乐<input type="file" accept="audio/*" style="display:none" onchange="uploadBgm(this.files[0]);this.value=''"></label></div>
+      <div class="note" id="bgmNote">默认纯人声；工作台上传的配乐会自动带到这里，按配乐音量混入成片。</div>
+      <div class="note">音量一次离线渲染，试听与成片同值。</div>
+    </section>
+
+    <section class="sec" id="s4">
+      <h3>④ 时间轴 <em>durs[] 摊开可见</em></h3>
+      <p class="desc">帧数、字幕窗口、音轨起点、打字机进度全部由 durs[] 推导；长口播只拉长本镜，不裁尾。</p>
+      <div style="overflow:auto;max-height:340px;border:1px solid var(--line);border-radius:9px">
+        <table class="tbl"><thead><tr><th>#</th><th>镜</th><th>时长</th><th>帧数</th><th>起始帧</th><th>字幕</th></tr></thead><tbody id="tlBody"></tbody></table>
+      </div>
+      <div class="note" id="srtPreview" style="max-height:120px;overflow:auto;font-family:ui-monospace,Menlo,monospace;font-size:10.5px"></div>
+    </section>
+
+    <section class="sec" id="s5">
+      <h3>⑤ 导出 <em>唯一产物 film.mp4</em></h3>
+      <p class="desc">按帧离线编码，不等墙钟；硬校验全过才给下载。字幕开关决定成片是否烧录字幕。</p>
+      <div class="kv"><span>视频</span><b id="encVideo">H.264 avc1.42001f</b></div>
+      <div class="kv"><span>音频</span><b id="audioKv">编译时自动探测（AAC / Opus）</b></div>
+      <div class="kv"><span>封装</span><b>mp4-muxer · 本地内联</b></div>
+      <div class="kv"><span>字幕</span><b id="subKv">画面烧录 + 可导出 SRT</b></div>
+      <div class="note">音轨格式编译时探测，结果卡写明实际编码。</div>
+      <button class="btn compile-cta" id="compileBtn" onclick="compileFilm()">⬇ 导出成片并下载 film.mp4</button>
+      <div class="row" style="margin-top:8px">
+        <button class="btn alt" onclick="abortCompile()">■ 中止</button>
+        <button class="btn alt" onclick="downloadSrt()">↓ 导出 SRT</button>
+        <button class="btn alt" onclick="showFallback()">? 浏览器不支持时</button>
+      </div>
+      <div class="prog"><i id="progBar"></i></div>
+      <div class="status" id="compileStatus" style="text-align:left;margin:0">尚未导出</div>
+      <div class="checks" id="checks"></div>
+      <div id="resultBox"></div>
+    </section>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   行迹 · 逐帧成片工作台
+   单一事实源：durs[] → frames[] → F[] → 画面帧 / SRT / 音轨起点
+   ===================================================================== */
+'use strict';
+
+/* ---------- 城市数据 ---------- */
+function cityList(){
+  const out=[], base=window.XINGJI_CITIES||{}, full=window.XJ_CITIES_FULL;
+  (base.curated||[]).concat(base.extended||[]).forEach(function(c){out.push({id:c.id,name:c.name,prov:c.prov,src:'base',obj:c});});
+  if(full&&full.cities){
+    full.cities.forEach(function(c){ if(!out.some(function(x){return x.id===c.id;})) out.push({id:c.id,name:c.name,prov:c.prov,src:'full',obj:c}); });
+  }
+  return out;
+}
+function findCity(id){const x=cityList().filter(function(c){return c.id===id;})[0];return x?x.obj:null;}
+function normCity(c){
+  const spots=c.spots||[], food=c.food||[], stay=c.stay||[], transport=c.transport||[];
+  return {
+    id:c.id,name:c.name,en:c.en||c.name,g:c.g||['#3f6f63','#8fb3a1'],a:c.a||'#3f6f63',
+    tag:c.tag||'',intro:c.intro||'',days:c.days||'3 天',seasons:c.seasons||'',climate:c.climate||'',
+    budget:c.budget||[180,320,620],
+    spots:spots.map(function(s){return Array.isArray(s)?{name:s[0],desc:s[s.length-1]||'',dur:s[2]||'',cost:s[3]||''}:{name:s.name||'',desc:s.desc||'',dur:s.dur||'',cost:s.cost||''};}),
+    food:food.map(function(s){return Array.isArray(s)?{name:s[0],desc:s[s.length-1]||''}:{name:s.name||'',desc:s.desc||''};}),
+    stay:stay.map(function(s){return Array.isArray(s)?{name:s[0],desc:s[s.length-1]||''}:{name:s.name||'',desc:s.desc||''};}),
+    transport:transport.map(function(s){return Array.isArray(s)?String(s[0]):(s.name||String(s));})
+  };
+}
+function buildScenes(c){
+  const d=normCity(c), pick=function(arr,n){return arr.slice(0,n).map(function(x){return x.name+'，'+x.desc;}).filter(function(x){return x.trim()!=='，';});};
+  const S=[];
+  S.push({title:d.name,sub:d.en,lines:[d.name+'，'+d.tag,d.intro||'按当季节奏排一条不赶路的线','建议 '+d.days+' · '+d.seasons]});
+  S.push({title:'行程速览',sub:'OVERVIEW',lines:['建议玩 '+d.days,d.seasons+' 最佳','共 '+d.spots.length+' 个落点','气候：'+d.climate]});
+  S.push({title:'衣 / 穿搭',sub:'PACKING',lines:['按 '+d.climate+' 准备','早晚温差大，带一件外套','舒适鞋比好看更重要']});
+  S.push({title:'食 / 必吃',sub:'FOOD',lines:pick(d.food,6).length?pick(d.food,6):['按当季找本地小馆，别只照榜单']});
+  S.push({title:'住 / 落脚',sub:'STAY',lines:pick(d.stay,3).length?pick(d.stay,3):['选交通便利、可步行到老城的位置']});
+  S.push({title:'行 / 交通',sub:'TRANSIT',lines:d.transport.slice(0,4).length?d.transport.slice(0,4):['市内步行 + 公共交通即可']});
+  const dayCount=Math.max(2,Math.min(4,parseInt(String(d.days).replace(/[^0-9]/g,''))||3));
+  for(let k=1;k<=dayCount;k++){
+    const chunk=d.spots.slice((k-1)*3,k*3);
+    S.push({title:'DAY '+String(k).padStart(2,'0'),sub:'逐日路线',
+      lines:chunk.length?chunk.map(function(x){return x.name+'，'+x.desc;}):['留半天给老城街区，不排满']});
+  }
+  S.push({title:'游玩地图',sub:'MAP',lines:['按同一天同色的动线走','虚线是建议顺序，不是必须']});
+  S.push({title:'灵感来源',sub:'SOURCES',lines:['出发前请核对票价、预约与营业时间','数据是结构化的行程框架，不是实时票务']});
+  S.push({title:'片尾',sub:'ENDING',lines:['把风景带回家','最后一天别排满，给返程留点缓冲']});
+  /* 每镜口播与画面同源，长度必须可控：最多 4 行、每行 40 字。
+     超长 intro 不直接进画面，否则打字机画不下、音频时长也会把整片拖到几分钟。 */
+  return S.slice(0,12).map(function(s){
+    s.lines=s.lines.slice(0,3).map(function(x){return String(x).slice(0,32);});
+    if(!s.lines.some(function(x){return x.trim();}))s.lines=[' '];
+    return s;
+  });
+}
+
+/* ---------- 状态 ---------- */
+const state={
+  cityId:'dali', fps:24, W:1280,H:720,
+  tw:true, twSpeed:1, fontSize:58,
+  subOn:true,
+  sub:{size:18,font:'default',color:'#fffdf8',bg:'#28473c',bgAlpha:.94,
+    charsPerLine:0,posX:.5,posY:null,align:'center',typewriter:true,typeSpeed:1},
+  wm:{text:'行迹 · TRAVEL',pos:'tr',alpha:.7,on:true,size:26,font:'default',color:'#3f6f63'},
+  gains:{master:1,voice:1,music:0,sfx:0},
+  ttsBase:(window.XINGJI_CONFIG&&window.XINGJI_CONFIG.instances&&window.XINGJI_CONFIG.instances[0])?window.XINGJI_CONFIG.instances[0].url:'https://libretts.is-an.org',
+  voice:'zh-CN-XiaoxiaoNeural'
+};
+let SCENES=[],durs=[],frames=[],F=[],FSET=new Set(),totalFrames=0,total=0;
+let voiceBufs=[],voiceKind='none',cityObj=null,bgmBuf=null,bgmName='';
+let playT=0,playing=false,raf=null,aborted=false,compiledBlob=null,lastChecks=[];
+
+const $=function(id){return document.getElementById(id);};
+function toast(s){const t=$('toast');t.textContent=s;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},1900);}
+function fmt(t){const m=Math.floor(t/60),s=(t%60).toFixed(1).padStart(4,'0');return String(m).padStart(2,'0')+':'+s;}
+
+/* ---------- 时间轴（唯一时钟） ---------- */
+function sceneText(i){return XJ.toSpeech(SCENES[i].lines.join(''));}
+function estimate(i){
+  const n=sceneText(i).replace(/\s/g,'').length;
+  /* 未合成人声时按字数估算；不设人为上限，避免把口播裁短 */
+  return +Math.max(2.0,n*0.06).toFixed(3);
+}
+function recalc(){
+  durs=SCENES.map(function(s,i){
+    /* 人声真实时长 + 0.30s 尾留白 = 该镜字幕窗口与画面帧长。
+       不设人为上限：长口播只把这一镜拉长，完整音频原样写入。 */
+    const raw=voiceBufs[i]?voiceBufs[i].duration+0.30:estimate(i);
+    return +Math.max(1.2,raw).toFixed(3);
+  });
+  frames=durs.map(function(d){return Math.max(1,Math.round(d*state.fps));});
+  F=[];let acc=0;frames.forEach(function(f){F.push(acc);acc+=f;});
+  FSET=new Set(F);totalFrames=acc;total=acc/state.fps;
+  renderTimeline();renderSummary();drawStage(playT);buildPhase();
+}
+function renderSummary(){
+  $('sumScenes').textContent=SCENES.length;
+  $('sumFr').textContent=totalFrames+' 帧';
+  $('sumDur').textContent=total.toFixed(3)+' s';
+  $('sumSrt').textContent=SCENES.length;
+  $('totalLabel').textContent=total.toFixed(1)+'s';
+  $('sumVoice').textContent=voiceKind==='none'?'未合成（按字数估算）':(voiceKind==='libretts'?'LibreTTS 真实音频':'占位音轨（非真人声）');
+  $('resLabel').textContent=state.W+' × '+state.H+' · '+state.fps+' fps';
+  $('encVideo').textContent='H.264 · '+state.W+'×'+state.H;
+}
+function renderTimeline(){
+  const rows=SCENES.map(function(s,i){
+    return '<tr data-i="'+i+'" onclick="seekScene('+i+')"><td>'+(i+1)+'</td><td>'+esc(s.title)+'</td><td>'+durs[i].toFixed(3)+'s</td><td>'+frames[i]+'</td><td>'+F[i]+'</td><td class="txt" title="'+esc(sceneText(i))+'">'+esc(sceneText(i))+'</td></tr>';
+  }).join('');
+  $('tlBody').innerHTML=rows;
+  let srt='';
+  SCENES.forEach(function(s,i){
+    const a=F[i]/state.fps,b=(F[i]+frames[i])/state.fps;
+    srt+=(i+1)+'\n'+srtTime(a)+' --> '+srtTime(b)+'\n'+sceneText(i)+'\n\n';
+  });
+  $('srtPreview').textContent=state.subOn?srt:'（字幕已关闭：成片与导出均不含字幕）';
+  window.__SRT=state.subOn?srt:'';
+}
+function srtTime(x){const h=String(Math.floor(x/3600)).padStart(2,'0'),m=String(Math.floor(x%3600/60)).padStart(2,'0'),s=String(Math.floor(x%60)).padStart(2,'0'),ms=String(Math.round((x%1)*1000)).padStart(3,'0');return h+':'+m+':'+s+','+ms;}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function buildPhase(){
+  const cols=['#3f6f63','#8fb3a1','#c4703c','#6f8468','#7a9bb5','#b08a5a'];
+  $('phasebar').innerHTML=SCENES.map(function(s,i){return '<span data-i="'+i+'" style="background:'+cols[i%cols.length]+'" onclick="seekScene('+i+')" title="'+esc(s.title)+'"></span>';}).join('');
+}
+function markPhase(i){[...$('phasebar').children].forEach(function(e,k){e.classList.toggle('on',k===i);});}
+
+/* ---------- 字体与字幕 / 水印样式（与工作台同源） ---------- */
+const FILMFONTS={default:'"PingFang SC","Microsoft YaHei","WenQuanYi Micro Hei",sans-serif',
+ sans:'"PingFang SC","Microsoft YaHei","WenQuanYi Micro Hei",sans-serif',
+ serif:'"Songti SC","SimSun","Noto Serif CJK SC",serif',kai:'"Kaiti SC","KaiTi","STKaiti",serif',
+ round:'"Yuanti SC","Microsoft JhengHei",sans-serif',mono:'Consolas,"Liberation Mono",monospace'};
+function filmFont(key){return FILMFONTS[key]||FILMFONTS.default;}
+function filmWrap(cx,text,maxW,maxChars){
+  var src=String(text||'');
+  if(maxChars>0){var seg=[],cur='';for(var i=0;i<src.length;i++){cur+=src[i];if(cur.length>=maxChars){seg.push(cur);cur='';}}if(cur)seg.push(cur);src=seg.join('\n');}
+  var out=[];src.split('\n').forEach(function(part){
+    var line='';for(var i=0;i<part.length;i++){var t=line+part[i];
+      if(cx.measureText(t).width>maxW&&line){out.push(line);line=part[i];}else line=t;}
+    if(line)out.push(line);
+  });return out;
+}
+function filmSubBox(W,H,pad,cw,bh){
+  var custom=(state.sub.posY!==null&&state.sub.posY!==undefined&&isFinite(+state.sub.posY));
+  if(!custom)return {x:pad+W*.02,w:cw-W*.04,y:H-pad-bh};
+  var w=cw-W*.04,x=pad+W*.02+Math.max(0,Math.min(cw-W*.04-w,(+state.sub.posX||.5)*(cw-W*.04)));
+  /* 与编辑页 subYMax 同一口径：只留 1.2% 画幅高贴边余量，字幕可拖到最底部 */
+  var yMax=Math.max(pad,H-bh-Math.round(H*.012));
+  var y=Math.max(pad,Math.min(yMax,(+state.sub.posY)*(H-bh)));
+  return {x:x,w:w,y:y};
+}
+function drawFilmSubtitle(cx,W,H,pad,cw,shown,maxW){
+  if(!state.subOn)return;
+  var size=Math.max(12,Math.round(state.sub.size*(W/1280)*1.3));
+  cx.save();cx.font=size+'px '+filmFont(state.sub.font);
+  var bh=Math.max(Math.round(H*.115),size*2.6),B=filmSubBox(W,H,pad,cw,bh);
+  cx.globalAlpha=Math.max(0,Math.min(1,state.sub.bgAlpha));
+  cx.fillStyle=state.sub.bg;roundRect(cx,B.x,B.y,B.w,bh,Math.round(W*.012));cx.fill();
+  cx.globalAlpha=1;cx.fillStyle=state.sub.color;cx.textBaseline='alphabetic';
+  var lines=filmWrap(cx,shown,B.w-W*.05,+state.sub.charsPerLine||0).slice(0,2);
+  lines.forEach(function(L,k){
+    var w=cx.measureText(L).width,sx=state.sub.align==='left'?B.x+W*.025:
+      state.sub.align==='right'?B.x+B.w-W*.025-w:Math.max(B.x+W*.01,(B.x+B.w-w)/2);
+    cx.fillText(L,sx,B.y+Math.round(bh*.42)+k*Math.round(size*1.35));
+  });
+  cx.restore();
+}
+/* ---------- 单一绘制函数 drawScene(t) ---------- */
+function drawScene(t,cv){
+  const cx=cv.getContext('2d',{alpha:false}),W=cv.width,H=cv.height;
+  const fi=Math.min(totalFrames-1,Math.max(0,Math.floor(t*state.fps)));
+  let si=0;for(let k=0;k<SCENES.length;k++){if(fi>=F[k])si=k;else break;}
+  const s=SCENES[si],local=Math.max(0,(fi-F[si])/Math.max(1,frames[si]));
+  const c=cityObj?normCity(cityObj):null;
+  const g=c?c.g:['#3f6f63','#8fb3a1'];
+  /* 背景 */
+  const bg=cx.createLinearGradient(0,0,W,H);bg.addColorStop(0,g[0]);bg.addColorStop(1,g[1]||'#8fb3a1');
+  cx.fillStyle=bg;cx.fillRect(0,0,W,H);
+  const pad=Math.round(W*0.055),cw=W-pad*2,ch=H-pad*2;
+  const cardW=Math.round(W*0.60);
+  /* 右侧整块是该帧自动取到的城市大图，完整显示 + 相框 + 城市标签，
+     开箱即有图，不用逐镜配图，也不会被裁成一条深绿山脊。 */
+  try{
+   const iu=XJ.sceneCover(c,s)||XJ.media(c).cover;
+   if(iu&&XJ.hasImage(iu)){
+    const ix=cardW,iy=0,iw=W-cardW,ih=H;
+    cx.save();cx.beginPath();cx.rect(ix,iy,iw,ih);cx.clip();
+    cx.fillStyle='#e8f0e9';cx.fillRect(ix,iy,iw,ih);
+    XJ.drawImageContain(cx,iu,ix,iy,iw,ih,'#e8f0e9');cx.restore();
+    cx.save();cx.strokeStyle='rgba(255,253,248,.92)';cx.lineWidth=6;
+    cx.strokeRect(ix+3,iy+3,iw-6,ih-6);
+    const th=Math.round(H*0.05);cx.fillStyle='rgba(24,44,35,.80)';cx.fillRect(ix,iy+ih-th,iw,th);
+    cx.fillStyle='#fff';cx.textAlign='left';cx.textBaseline='middle';
+    cx.font='600 '+Math.round(W*0.013)+'px "PingFang SC","Microsoft YaHei",sans-serif';
+    cx.fillText((c.name||'行迹')+'  ·  城市配图',ix+Math.round(W*0.012),iy+ih-th/2);
+    cx.textBaseline='alphabetic';cx.restore();
+   }
+  }catch(e){}
+  cx.fillStyle='rgba(255,253,248,.94)';
+  roundRect(cx,pad,pad,cardW,ch,Math.round(W*0.018));cx.fill();
+  try{XJ.banner(cx,{W:W,H:H,pad:pad,top:pad+54},c,s);}catch(e){}
+  /* 镜号水印 */
+  cx.fillStyle='rgba(63,111,99,.09)';cx.font='bold '+Math.round(W*0.13)+'px sans-serif';
+  cx.fillText(String(si+1).padStart(2,'0'),W-pad-W*0.16,H-pad-W*0.05);
+  /* 标题 */
+  cx.fillStyle='#1e2a24';cx.font='bold '+Math.round(W*0.042)+'px "PingFang SC","Microsoft YaHei",sans-serif';
+  cx.fillText(s.title,pad+W*0.035,pad+W*0.072);
+  cx.fillStyle='#8a9489';cx.font=Math.round(W*0.016)+'px sans-serif';
+  cx.fillText(s.sub,pad+W*0.035,pad+W*0.098);
+  cx.fillStyle='#e6e1d5';cx.fillRect(pad+W*0.035,pad+W*0.112,cardW-W*0.07,2);
+  /* 正文 / 打字机：进度由帧索引决定 */
+  const full=sceneText(si),fs=Math.round(state.fontSize*(W/1280));
+  cx.font=fs+'px "PingFang SC","Microsoft YaHei",sans-serif';cx.fillStyle='#1e2a24';
+  const lineH=Math.round(fs*1.55),maxW=cardW-W*0.07;
+  const shown=state.tw?full.slice(0,Math.ceil(full.length*Math.min(1,local*1.35*state.twSpeed))):full;
+  const lines=wrapText(cx,shown,maxW).slice(0,6);
+  lines.forEach(function(L,k){cx.fillText(L+(state.tw&&k===lines.length-1?'▌':''),pad+W*0.035,pad+W*0.165+k*lineH);});
+  /* 字幕板（与正文同源）：开关关闭时整块不绘制，导出自然不含字幕 */
+  drawFilmSubtitle(cx,W,H,pad,cw,shown,maxW);
+  /* 品牌水印 */
+  drawWatermark(cx,W,H,pad);
+  return {si:si,fi:fi,local:local,shown:shown};
+}
+function roundRect(cx,x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();}
+function wrapText(cx,text,maxW){
+  const out=[];let cur='';
+  for(let i=0;i<text.length;i++){
+    const t=cur+text[i];
+    if(cx.measureText(t).width>maxW&&cur){out.push(cur);cur=text[i];}else cur=t;
+  }
+  if(cur)out.push(cur);return out;
+}
+function drawWatermark(cx,W,H,pad){
+  const wm=state.wm;if(wm.pos==='none'||wm.on===false)return;
+  cx.save();cx.globalAlpha=wm.alpha;cx.fillStyle=wm.color||'#3f6f63';
+  const fs=Math.max(10,Math.round((wm.size||26)*(W/1280)*1.35)),txt=wm.text;
+  cx.font='bold '+fs+'px '+filmFont(wm.font);
+  if(wm.pos==='tile'){
+    cx.rotate(-0.35);
+    for(let y=-H;y<H*2;y+=Math.round(H*0.22))for(let x=-W;x<W*2;x+=Math.round(W*0.34))cx.fillText(txt,x,y);
+  }else{
+    const tw=cx.measureText(txt).width;
+    const h=wm.pos[1]||'r',v=wm.pos[0]||'t';
+    const x=h==='r'?W-pad-tw-W*0.01:h==='c'?(W-tw)/2:pad+W*0.01;
+    const y=v==='t'?pad+fs+W*0.01:v==='m'?(H+fs)/2:H-pad-W*0.02;
+    cx.fillText(txt,x,y);
+  }
+  cx.restore();
+}
+function drawStage(t){const cv=$('cv');if(!SCENES.length)return;const r=drawScene(t,cv);$('clock').textContent=fmt(t);markPhase(r.si);return r;}
+
+/* ---------- 预览（只读 durs[]，不参与编译） ---------- */
+function playPreview(){
+  if(playing)return;playing=true;
+  const t0=performance.now(),base=playT;
+  (function loop(now){
+    if(!playing)return;
+    playT=base+(now-t0)/1000;
+    if(playT>=total){playT=0;}
+    drawStage(playT);$('playStatus').innerHTML='预览中 · <b>'+fmt(playT)+'</b> / '+total.toFixed(1)+'s';
+    raf=requestAnimationFrame(loop);
+  })(t0);
+}
+function pausePreview(){playing=false;if(raf)cancelAnimationFrame(raf);$('playStatus').innerHTML='已暂停 · <b>'+fmt(playT)+'</b> / '+total.toFixed(1)+'s';}
+function stopPreview(){playing=false;if(raf)cancelAnimationFrame(raf);playT=0;drawStage(0);$('playStatus').innerHTML='静止 · <b>00:00.0</b> / '+total.toFixed(1)+'s';}
+function replayPreview(){stopPreview();playPreview();}
+function seekScene(i){playT=F[i]/state.fps;playing=false;if(raf)cancelAnimationFrame(raf);drawStage(playT);$('playStatus').innerHTML='跳到第 '+(i+1)+' 镜 · <b>'+fmt(playT)+'</b>';
+  [...$('tlBody').children].forEach(function(tr,k){tr.classList.toggle('on',k===i);});}
+
+/* ---------- 定位（点哪段，右侧同一面板定位到哪段） ---------- */
+function go(sec,name){
+  const el=$(sec),panel=$('panel');
+  [...panel.querySelectorAll('.sec')].forEach(function(x){x.classList.toggle('on',x.id===sec);});
+  [...$('rail').querySelectorAll('button')].forEach(function(b){b.classList.toggle('on',b.dataset.sec===sec);});
+  [...panel.querySelectorAll('.sec')].forEach(function(x){x.classList.remove('flash');});
+  el.classList.add('flash');setTimeout(function(){el.classList.remove('flash');},600);
+  $('locPill').textContent='已定位：'+name;
+  panel.scrollTop=0;
+  const rail=$('rail');
+  if(rail){const rr=rail.getBoundingClientRect();
+   if(rr.bottom<90||rr.top>window.innerHeight-40){
+    try{rail.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}
+   }}
+  window.__LAST_LOC={sec:sec,name:name,shown:[...panel.querySelectorAll('.sec.on')].map(x=>x.id)};
+}
+
+/* ---------- 控件 ---------- */
+function initCitySel(){
+  const list=cityList();
+  $('citySel').innerHTML=list.map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===state.cityId?' selected':'')+'>'+esc(c.name)+' · '+esc(c.prov||'')+'</option>';}).join('');
+  if(!list.some(function(c){return c.id===state.cityId;}))state.cityId=list[0]?list[0].id:'dali';
+}
+function changeCity(id){
+  state.cityId=id;cityObj=findCity(id);
+  SCENES=buildScenes(cityObj||{name:id});voiceBufs=[];voiceKind='none';
+  $('voiceNote').textContent='切换城市后需重新逐句合成；当前按字数估算 durs[]。';
+  renderSceneEdits();recalc();drawStage(0);
+}
+function renderSceneEdits(){
+  $('sceneEdits').innerHTML=SCENES.map(function(s,i){
+    return '<div class="scene-edit"><label><span>'+(i+1)+' · '+esc(s.title)+'</span><span>'+s.lines.join('').length+' 字</span></label>'
+      +'<textarea data-i="'+i+'" oninput="editScene('+i+',this.value)">'+esc(s.lines.join('\n'))+'</textarea></div>';
+  }).join('');
+}
+function editScene(i,v){SCENES[i].lines=v.split('\n').filter(function(x){return x.trim();});if(!SCENES[i].lines.length)SCENES[i].lines=[' '];
+  if(voiceBufs[i])voiceBufs[i]=null;recalc();}
+function setRes(v){const p=v.split('x');state.W=+p[0];state.H=+p[1];const cv=$('cv');cv.width=state.W;cv.height=state.H;
+  cv.classList.toggle('portrait',state.H>state.W);renderSummary();drawStage(playT);}
+function setFps(v){state.fps=+v;recalc();}
+function setTw(on){state.tw=on;$('twOn').classList.toggle('on',on);$('twOff').classList.toggle('on',!on);drawStage(playT);}
+function setTwSpeed(v){state.twSpeed=+v;$('twSpeedLabel').textContent=(+v).toFixed(1)+'×';drawStage(playT);}
+function setFont(v){state.fontSize=+v;$('fontLabel').textContent=v+' px';drawStage(playT);}
+function setWm(k,v){
+  if(k==='alpha'){state.wm.alpha=+v/100;$('wmAlphaLabel').textContent=v+'%';}
+  else if(k==='size'){state.wm.size=+v;$('wmSizeLabel').textContent=v+' px';}
+  else state.wm[k]=v;
+  drawStage(playT);syncFilmCfgBack();
+}
+function setGain(k,v){state.gains[k]=+v/100;$('g'+k[0].toUpperCase()+k.slice(1)).textContent=v+'%';syncFilmCfgBack();}
+function setSubOn(v){
+  state.subOn=!!v;$('subOnBtn').classList.toggle('on',v);$('subOffBtn').classList.toggle('on',!v);
+  $('subKv').textContent=v?'画面烧录 + 可导出 SRT':'已关闭 · 成片与 SRT 均不含字幕';
+  renderTimeline();drawStage(playT);syncFilmCfgBack();
+}
+function syncGainUi(){['master','voice','music'].forEach(function(k){
+  var id='rg'+k[0].toUpperCase()+k.slice(1),el=$(id),lab=$('g'+k[0].toUpperCase()+k.slice(1));
+  if(el)el.value=Math.round((state.gains[k]||0)*100);
+  if(lab)lab.textContent=Math.round((state.gains[k]||0)*100)+'%';
+ });}
+function syncWmUi(){
+  $('wmText').value=state.wm.text||'';$('wmPos').value=state.wm.pos||'tr';
+  $('wmAlpha').value=Math.round((state.wm.alpha||.7)*100);$('wmAlphaLabel').textContent=Math.round((state.wm.alpha||.7)*100)+'%';
+  if($('wmSize')){$('wmSize').value=state.wm.size||26;$('wmSizeLabel').textContent=(state.wm.size||26)+' px';}
+  if($('wmFontSel'))$('wmFontSel').value=state.wm.font||'default';
+  if($('wmColor'))$('wmColor').value=state.wm.color||'#3f6f63';
+}
+function setTtsBase(v){state.ttsBase=v.trim();}
+
+/* ---------- 人声：素材，不是时钟 ---------- */
+function ttsUrl(text){
+  return state.ttsBase.replace(/\/$/,'')+'/api/tts?t='+encodeURIComponent(text)+'&v='+encodeURIComponent(state.voice)+'&r=0&p=0&o=mp3';
+}
+function placeholderBuffer(ctx,secs){
+  const n=Math.max(1,Math.round(ctx.sampleRate*secs)),b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++){const t=i/ctx.sampleRate;d[i]=0.10*Math.sin(2*Math.PI*(180+40*Math.sin(t*3))*t)*(0.6+0.4*Math.sin(t*7));}
+  return b;
+}
+async function decodeAudio(arr){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  try{const b=await ctx.decodeAudioData(arr.slice(0));await ctx.close();return b;}catch(e){await ctx.close();return null;}
+}
+async function previewVoice(){
+  const i=Math.min(SCENES.length-1,Math.max(0,Math.round(playT*state.fps/frames[0]||0)));
+  const txt=sceneText(i).slice(0,60);
+  const note=$('voiceNote');
+  note.textContent='正在试听第 '+(i+1)+' 镜…（试听不写 durs[]、不触发编译）';
+  try{
+    const r=await fetch(ttsUrl(txt),{signal:AbortSignal.timeout(12000)});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const ab=await r.arrayBuffer();
+    const b=await decodeAudio(ab);
+    if(!b)throw new Error('音频解码失败');
+    const au=new Audio(URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'})));
+    await au.play();note.textContent='✓ 试听完成（LibreTTS），时长 '+b.duration.toFixed(3)+'s；时间轴未改动。';
+  }catch(e){
+    note.textContent='试听失败：'+e.message+'。成片仍可编译，接口不可达时会用占位音轨并明确标注。';
+    try{const ctx=new (window.AudioContext||window.webkitAudioContext)(),b=placeholderBuffer(ctx,1.2);
+      const src=ctx.createBufferSource();src.buffer=b;src.connect(ctx.destination);src.start();setTimeout(function(){ctx.close();},1400);}catch(_){}
+  }
+}
+/* 逐句合成：快速探测 + 受控并发 + 同页缓存。
+   旧版 12 句串行、每句 15s 超时；公共实例不可达时最坏干等 180s，
+   而每次点「导出成片」都会重跑一遍。现在：
+   ① 第一句做 2.5s 快速探测，不通就整体降级，不再逐句等超时；
+   ② 可达时 4 路并发，总耗时约等于 3 批而不是 12 倍；
+   ③ 结果按 接口|音色|文本 缓存，重复导出 0 请求、秒级；
+   ④ 仍等全部音频到齐后才 recalc()，durs[] 只由 AudioBuffer.duration 决定。 */
+const TTS_CACHE=new Map();
+const TTS_DOWN=new Map();   // 接口|音色 -> 上次判定不通的时间（30s 内不重复探测）
+const TTS_PROBE_MS=2500,TTS_FETCH_MS=20000,TTS_CONC=4,TTS_DOWN_TTL=30000;
+let voiceDetail='';
+function ttsKey(t){return state.ttsBase.replace(/\/$/,'')+'|'+state.voice+'|'+t;}
+function downKey(){return state.ttsBase.replace(/\/$/,'')+'|'+state.voice;}
+async function fetchVoiceBuf(t,ms){
+  const r=await fetch(ttsUrl(t),{signal:AbortSignal.timeout(ms)});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const ab=await r.arrayBuffer();
+  const b=await decodeAudio(ab);
+  if(!b||!(b.duration>0.08))throw new Error('音频时长异常');
+  return b;
+}
+async function synthVoices(force){
+  const note=$('voiceNote'),t0=performance.now();
+  const texts=SCENES.map(function(s,i){return sceneText(i);});
+  const out=new Array(texts.length).fill(null);
+  let cached=0,ok=0,fail=0,req=0,probeErr='';
+  const dk=downKey(),downAt=TTS_DOWN.get(dk)||0;
+  const downCached=!force&&downAt&&(Date.now()-downAt)<TTS_DOWN_TTL;
+  texts.forEach(function(t,i){const b=TTS_CACHE.get(ttsKey(t));if(b){out[i]=b;cached++;}});
+  const todo=texts.map(function(t,i){return {i:i,t:t};}).filter(function(x){return !out[x.i];});
+  note.textContent='逐句合成 · 缓存命中 '+cached+'/'+texts.length+'，待请求 '+todo.length+' 段…';
+  /* ① 快速探测：只发第一句，短超时判定整条链路 */
+  let reachable=false;
+  if(downCached){
+    probeErr='上次快速探测已判定接口不通，'+TTS_DOWN_TTL/1000+'s 内不重复请求';
+  }else if(todo.length){
+    try{
+      const b=await fetchVoiceBuf(todo[0].t,TTS_PROBE_MS);
+      out[todo[0].i]=b;TTS_CACHE.set(ttsKey(todo[0].t),b);
+      ok++;req++;reachable=true;TTS_DOWN.delete(dk);todo.shift();
+    }catch(e){probeErr=String(e&&e.message||e);TTS_DOWN.set(dk,Date.now());}
+  }else if(texts.length){reachable=true;}
+  /* ② 可达才并发其余；不可达直接降级，不逐句干等 */
+  if(reachable&&todo.length){
+    let cur=0,done=cached+ok+fail;
+    async function worker(){
+      while(true){
+        const j=todo[cur++];if(!j)return;
+        try{
+          const b=await fetchVoiceBuf(j.t,TTS_FETCH_MS);
+          out[j.i]=b;TTS_CACHE.set(ttsKey(j.t),b);ok++;
+        }catch(e){fail++;}
+        req++;done++;
+        note.textContent='逐句合成 · 并发 '+TTS_CONC+' · 完成 '+done+'/'+texts.length+
+          '（缓存 '+cached+' / 失败 '+fail+'）';
+      }
+    }
+    const ws=[];for(let w=0;w<Math.min(TTS_CONC,todo.length);w++)ws.push(worker());
+    await Promise.all(ws);
+  }
+  /* ③ 缺失句用占位补足，绝不伪装真人声 */
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  let placeholder=0;
+  for(let i=0;i<texts.length;i++)if(!out[i]){out[i]=placeholderBuffer(ctx,Math.max(1.2,estimate(i)*0.72));placeholder++;}
+  await ctx.close();
+  voiceBufs=out;
+  voiceKind=(ok+cached)>0?'libretts':'placeholder';
+  voiceDetail='真实 '+(ok+cached)+' 段（本次请求 '+req+' / 缓存 '+cached+'）'+
+    (placeholder?' · 占位 '+placeholder+' 段':'')+' · 耗时 '+((performance.now()-t0)/1000).toFixed(1)+'s';
+  note.textContent=reachable
+    ?'✓ 合成完成 · '+voiceDetail+'；durs[] 已按真实时长 + 0.30s 尾留白一次性写入，完整口播不裁尾。'
+    :(downCached
+      ?'⚠ '+probeErr+'：'+voiceDetail+'；不是真人声，durs[] 按占位音频真实时长重算。点「逐句合成」可强制重试探测。'
+      :'⚠ 接口快速探测 '+TTS_PROBE_MS+'ms 内不通（'+probeErr.slice(0,80)+'）：已整体降级，未逐句干等超时。'+voiceDetail+'；不是真人声，durs[] 按占位音频真实时长重算。');
+  recalc();toast('逐句合成完成 · durs[] 已更新');
+  return {ok:ok+cached,cached:cached,fail:fail,placeholder:placeholder,req:req,reachable:reachable,ms:Math.round(performance.now()-t0)};
+}
+
+/* ---------- 离线混音（一次渲染整条 PCM） ---------- */
+async function offlineMix(){
+  const SR=48000,n=Math.ceil(total*SR);
+  const oc=new OfflineAudioContext(2,n,SR);
+  const master=oc.createGain();master.gain.value=state.gains.master;master.connect(oc.destination);
+  const vg=oc.createGain();vg.gain.value=state.gains.voice;vg.connect(master);
+  const mg=oc.createGain();mg.gain.value=state.gains.music;mg.connect(master);
+  if(bgmBuf&&state.gains.music>0){
+    const bs=oc.createBufferSource();bs.buffer=bgmBuf;bs.loop=true;bs.connect(mg);
+    bs.start(0);bs.stop(Math.max(total,.1));
+  }
+  voiceBufs.forEach(function(b,i){
+    if(!b)return;const src=oc.createBufferSource();src.buffer=b;
+    const g=oc.createGain();g.gain.value=1;src.connect(g).connect(vg);
+    /* 完整音频原样写入：durs[i] 已按 b.duration + 0.30s 生成，窗口必然容得下 */
+    src.start(F[i]/state.fps,0,b.duration);
+  });
+  const rendered=await oc.startRendering();
+  const L=rendered.getChannelData(0),R=rendered.numberOfChannels>1?rendered.getChannelData(1):L;
+  /* 逐镜 RMS（硬校验用） */
+  const rms=SCENES.map(function(s,i){
+    const a=Math.floor(F[i]/state.fps*SR),b=Math.min(n,Math.floor((F[i]+frames[i])/state.fps*SR));
+    let sum=0,c=0;for(let k=a;k<b;k+=13){sum+=L[k]*L[k];c++;}
+    return c?Math.sqrt(sum/c):0;
+  });
+  return {L:L,R:R,n:n,SR:SR,rms:rms,rendered:rendered};
+}
+
+/* ---------- 编译（不播放、按帧索引） ---------- */
+function supportCheck(){
+  const ok=typeof VideoEncoder!=='undefined'&&typeof AudioEncoder!=='undefined'&&typeof Mp4Muxer!=='undefined';
+  if(!ok){
+    const msg='浏览器不支持 WebCodecs：请用 Chrome / Edge 通过 http(s):// 或 localhost 打开工程版；单文件 file:// 环境可能不可用。';
+    $('compileStatus').textContent=msg;filmPost({xj_film_error:msg});
+  }
+  return ok;
+}
+function filmPost(o){try{parent.postMessage(o,'*');}catch(e){}}
+function setProg(cur,max,txt){
+  $('progBar').style.width=(max?Math.round(cur/max*100):0)+'%';
+  $('compileStatus').textContent=txt;
+  filmPost({xj_film_status:txt,cur:cur,max:max});
+}
+function abortCompile(){aborted=true;$('compileStatus').textContent='已中止 · 未产出文件';$('compileBtn').disabled=false;}
+function downloadBlob(blob,name){
+  const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(u);},30000);
+}
+function b64(bytes){let s='';for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(s);}
+
+async function compileFilm(){
+  if(!supportCheck())return;
+  aborted=false;$('compileBtn').disabled=true;$('resultBox').innerHTML='';$('checks').innerHTML='';
+  recalc();
+  /* 导出前置：三路音量把音轨压成静音时，立刻给出可操作提示，
+     不再让用户等完整片编完才看到一句笼统的「硬校验未全过」。 */
+  const gm=+state.gains.master||0,gv=+state.gains.voice||0,gu=+state.gains.music||0;
+  if(gm<=0.0001||(gv<=0.0001&&gu<=0.0001)){
+    const msg='音轨会静音：主音量为 0，或人声与配乐都为 0。请到「声音」把主音量或人声音量调高再导出';
+    $('compileStatus').textContent=msg;
+    filmPost({xj_film_error:msg,xj_film_checks:[
+      {name:'音轨逐镜有信号（RMS > 0）',ok:false,detail:'音量配置导致静音 · master '+gm.toFixed(2)+' / voice '+gv.toFixed(2)+' / music '+gu.toFixed(2)}
+    ]});
+    $('compileBtn').disabled=false;return;
+  }
+  const cv=document.createElement('canvas');cv.width=state.W;cv.height=state.H;
+  const cx=cv.getContext('2d',{alpha:false});
+  /* 预览与编码共用 drawScene(t)：用离屏 canvas 作为绘制目标 */
+  const drawTo=function(t){return drawScene(t,cv);};
+  try{
+    setProg(0,1,'1/5 离线混音…');
+    const mix=await offlineMix();
+    if(aborted)throw new Error('ABORT');
+
+    /* 音轨编码自适应：探测浏览器是否具备 AAC 编码能力，
+       支持就出标准 H.264/AAC MP4，否则回落 Opus in MP4，结果卡写明实际编码 */
+    let useAAC=false;
+    try{useAAC=!!(await AudioEncoder.isConfigSupported({codec:'mp4a.40.2',sampleRate:48000,numberOfChannels:2,bitrate:128000})).supported;}catch(_){}
+    const audioCodec=useAAC?'aac':'opus';
+    const encCodec=useAAC?'mp4a.40.2':'opus';
+    $('audioPill').textContent='音轨：'+(useAAC?'AAC · 标准 H.264/AAC MP4':'Opus in MP4');
+    $('audioKv').textContent=(useAAC?'AAC · 标准 MP4':'Opus in MP4')+'（运行时探测）';
+    window.__AUDIO_CODEC=audioCodec;
+    const target=new Mp4Muxer.ArrayBufferTarget();
+    const muxer=new Mp4Muxer.Muxer({
+      target:target,fastStart:'in-memory',
+      video:{codec:'avc',width:state.W,height:state.H,frameRate:state.fps},
+      audio:{codec:audioCodec,numberOfChannels:2,sampleRate:48000}
+    });
+    let vChunks=0,aChunks=0;
+    const veCfg={codec:'avc1.42001f',width:state.W,height:state.H,
+      bitrate:Math.round(state.W*state.H*state.fps*0.11),framerate:state.fps,
+      avc:{format:'avc'},latencyMode:'quality'};
+    let veOK=null;try{veOK=await VideoEncoder.isConfigSupported(veCfg);}catch(_){}
+    if(veOK&&veOK.supported===false){
+      $('compileStatus').textContent='当前浏览器不支持 H.264 编码：请用 Chrome / Edge 打开工程版再导出';
+      filmPost({xj_film_error:'当前浏览器不支持 H.264 编码'});
+      $('compileBtn').disabled=false;return;
+    }
+    const ve=new VideoEncoder({output:function(c,m){muxer.addVideoChunk(c,m);vChunks++;},error:function(e){throw new Error('VE:'+e.message);}});
+    ve.configure(veCfg);
+
+    const ae=new AudioEncoder({output:function(c,m){muxer.addAudioChunk(c,m);aChunks++;},error:function(e){throw new Error('AE:'+e.message);}});
+    ae.configure({codec:encCodec,sampleRate:48000,numberOfChannels:2,bitrate:128000});
+
+    /* 音频：整条 PCM 逐 1024 样本块编码 */
+    const BLK=1024;
+    for(let off=0;off<mix.n;off+=BLK){
+      const k=Math.min(BLK,mix.n-off),d=new Float32Array(k*2);
+      for(let j=0;j<k;j++){d[j]=mix.L[off+j];d[k+j]=mix.R[off+j];}
+      const ad=new AudioData({format:'f32-planar',sampleRate:48000,numberOfFrames:k,numberOfChannels:2,
+        timestamp:Math.round(off*1e6/48000),data:d});
+      ae.encode(ad);ad.close();
+    }
+    await ae.flush();ae.close();
+    setProg(0,totalFrames,'2/5 音轨已编码 '+aChunks+' 块，开始逐帧编码…');
+
+    /* 视频：帧索引决定内容，await flush 驱动的循环不依赖动画帧 */
+    const probe={};
+    for(let i=0;i<totalFrames;i++){
+      if(aborted)throw new Error('ABORT');
+      const r=drawTo(i/state.fps);
+      if(i===F[1])probe.first=r.shown;
+      if(i===F[1]+Math.round(frames[1]/2))probe.mid=r.shown;
+      const vf=new VideoFrame(cv,{timestamp:Math.round(i*1e6/state.fps),duration:Math.round(1e6/state.fps)});
+      ve.encode(vf,{keyFrame:FSET.has(i)});vf.close();
+      if(i%40===0){setProg(i,totalFrames,'3/5 逐帧编码 '+i+' / '+totalFrames+' 帧');await new Promise(function(r){setTimeout(r,0);});}
+      /* 背压：队列堆积时先 flush，避免长片把 VideoFrame 全堆在内存里 */
+      if(ve.encodeQueueSize>8){await ve.flush();}
+    }
+    await ve.flush();ve.close();
+    setProg(totalFrames,totalFrames,'4/5 封装中…');
+    muxer.finalize();
+    const bytes=new Uint8Array(target.buffer);
+    compiledBlob=new Blob([bytes],{type:'video/mp4'});
+    window.__FILM_B64=b64(bytes);window.__FILM_BYTES=bytes.length;
+
+    /* 5/5 硬校验 */
+    const checks=hardCheck({bytes:bytes,vChunks:vChunks,aChunks:aChunks,mix:mix,probe:probe});
+    lastChecks=checks;
+    $('checks').innerHTML=checks.map(function(c){return '<div class="check '+(c.ok?'ok':'bad')+'">'+(c.ok?'✓':'✗')+' '+esc(c.name)+(c.detail?' · '+esc(c.detail):'')+'</div>';}).join('');
+    const allOK=checks.every(function(c){return c.ok;});
+    if(!allOK){
+      const bad=checks.filter(function(c){return !c.ok;});
+      const msg='硬校验未全过 · 不提供下载';
+      $('compileStatus').textContent=msg+'（'+bad.map(function(c){return c.name;}).join('、')+'）';
+      filmPost({xj_film_error:msg,xj_film_checks:checks,xj_film_bad:bad.map(function(c){return c.name;})});
+      $('compileBtn').disabled=false;return;
+    }
+    setProg(totalFrames,totalFrames,'5/5 完成 · '+bytes.length+' B · '+checks.length+' 项硬校验全过');
+    const codecLabel=useAAC?'AAC · 标准 H.264/AAC MP4':'Opus in MP4';
+    const mini=totalFrames+' 帧 / '+total.toFixed(3)+'s · H.264 + '+codecLabel+' · '+SCENES.length+' 镜 · 字幕：'+(state.subOn?'开':'关')+' · 人声：'+(voiceKind==='libretts'?'LibreTTS 真实音频':'占位音轨（非真人声）')+(voiceDetail?' · '+voiceDetail:'');
+    const vurl=URL.createObjectURL(compiledBlob);
+    $('resultBox').innerHTML=filmPlayerHtml(vurl,{recovered:false,mini:mini});
+    window.__FILM_META={codec:codecLabel,frames:totalFrames,dur:total.toFixed(3),scenes:SCENES.length,voice:voiceKind};
+    window.__FILM_CODEC=audioCodec;
+    saveFilm(compiledBlob,{codec:codecLabel,mini:mini});
+    downloadBlob(compiledBlob,'film.mp4');
+    window.__COMPILE_DONE=true;
+    filmPost({xj_film_done:true,bytes:bytes.length,codec:codecLabel});
+    toast('导出完成 · film.mp4');
+  }catch(e){
+    $('compileStatus').textContent=(e.message==='ABORT'?'已中止 · 未产出文件':'导出失败：'+e.message);
+    filmPost({xj_film_error:e.message==='ABORT'?'已中止 · 未产出文件':'导出失败：'+e.message});
+  }finally{$('compileBtn').disabled=false;}
+}
+
+function hardCheck(o){
+  const fourcc=String.fromCharCode.apply(null,o.bytes.subarray(4,8));
+  const srt=window.__SRT||'',blocks=srt.trim().split(/\n\n/).filter(Boolean);
+  const srtTexts=blocks.map(function(b){return b.split('\n').slice(2).join('\n');});
+  const textsOK=srtTexts.length===SCENES.length&&srtTexts.every(function(t,i){return t===sceneText(i);});
+  const rmsMin=Math.min.apply(null,o.mix.rms);
+  const twOK=(o.probe.first!==undefined&&o.probe.mid!==undefined&&o.probe.first!==o.probe.mid);
+  /* 抽帧一致性：同一 drawScene(t) 在编译后重绘，像素哈希相同 */
+  const cv=document.createElement('canvas');cv.width=state.W;cv.height=state.H;
+  const pick=[0,Math.floor(totalFrames/2),totalFrames-1];
+  const hashes=pick.map(function(i){drawScene(i/state.fps,cv);return hashCanvas(cv);});
+  const hashes2=pick.map(function(i){drawScene(i/state.fps,cv);return hashCanvas(cv);});
+  const frameOK=hashes.every(function(h,k){return h===hashes2[k];});
+  return [
+    {name:'容器为 MP4（ftyp）',ok:fourcc==='ftyp',detail:fourcc},
+    {name:'视频 chunk 数 = 总帧数',ok:o.vChunks===totalFrames,detail:o.vChunks+' / '+totalFrames},
+    {name:'时长 = Σ durs[]',ok:Math.abs(total-totalFrames/state.fps)<1e-6,detail:total.toFixed(3)+'s'},
+    {name:state.subOn?'SRT 条数 = 镜数且逐条文本同源':'字幕关闭 · 成片与 SRT 均不含字幕',
+     ok:state.subOn?textsOK:(window.__SRT===''&&drawFilmSubtitle.length>0),
+     detail:state.subOn?(blocks.length+' / '+SCENES.length):'字幕开关=关'},
+    {name:'音轨逐镜有信号（RMS > 0）',ok:rmsMin>0.0005,detail:'min '+rmsMin.toFixed(5)},
+    {name:'抽帧重绘与编码帧一致（同函数）',ok:frameOK,detail:pick.length+' 帧'},
+    {name:'打字机由帧索引推进（首帧 ≠ 中段）',ok:state.tw?twOK:true,detail:state.tw?'逐字':'整句模式'}
+  ];
+}
+function hashCanvas(cv){
+  const d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
+  let h=2166136261;for(let i=0;i<d.length;i+=97){h^=d[i];h=Math.imul(h,16777619);}return h>>>0;
+}
+/* ---------- 成片产物：同页播放 + 刷新可回看 ---------- */
+const DBN='xingji-film-v1',STORE='films';
+function openDB(){return new Promise(function(res,rej){
+  try{
+    const q=indexedDB.open(DBN,2);
+    q.onupgradeneeded=function(){var db=q.result;
+      if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);
+      if(!db.objectStoreNames.contains('media'))db.createObjectStore('media');};
+    q.onsuccess=function(){res(q.result);};q.onerror=function(){rej(q.error);};
+  }catch(e){rej(e);}
+});}
+async function saveFilm(blob,meta){
+  try{
+    const db=await openDB();
+    await new Promise(function(res,rej){
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).put({blob:blob,meta:meta},'latest');
+      tx.oncomplete=function(){res();};tx.onerror=function(){rej(tx.error);};
+    });
+    db.close();
+  }catch(_){/* file:// 或隐私模式下不可用，不影响成片 */}
+}
+async function loadFilm(){
+  try{
+    const db=await openDB();
+    const r=await new Promise(function(res,rej){
+      const tx=db.transaction(STORE,'readonly');
+      const q=tx.objectStore(STORE).get('latest');
+      q.onsuccess=function(){res(q.result);};q.onerror=function(){rej(q.error);};
+    });
+    db.close();return r||null;
+  }catch(_){return null;}
+}
+function filmPlayerHtml(url,o){
+  return '<div class="result"><h4>'+(o.recovered?'上次成片已就绪 · 点播放直接看':'film.mp4 · 编译完成')+'</h4>'
+    +'<video id="filmPlayer" controls playsinline preload="metadata" style="width:100%;border-radius:10px;background:#000" src="'+url+'"></video>'
+    +'<div class="mini">'+o.mini+'</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">'
+    +'<a class="dl" href="#" onclick="downloadBlob(compiledBlob,\'film.mp4\');return false">⬇ 下载 film.mp4</a>'
+    +'<button class="btn" onclick="replayFilm()">↻ 重播</button></div></div>';
+}
+function replayFilm(){const v=$('filmPlayer');if(v){v.currentTime=0;v.play().catch(function(){});}}
+async function showRecovered(){
+  const r=await loadFilm();
+  if(!r||!r.blob)return;
+  compiledBlob=r.blob;
+  window.__FILM_RECOVERED=true;window.__FILM_BYTES=r.blob.size;
+  const u=URL.createObjectURL(r.blob);
+  $('resultBox').innerHTML=filmPlayerHtml(u,{recovered:true,mini:'点播放直接看 · '+r.meta.mini});
+  $('audioPill').textContent='音轨：已就绪（'+(r.meta.codec||'')+'）';
+  $('audioKv').textContent=(r.meta.codec||'')+'（上次成片）';
+}
+function downloadSrt(){
+  if(!state.subOn){toast('字幕已关闭：成片与 SRT 均不含字幕');return;}
+  downloadBlob(new Blob([window.__SRT||''],{type:'text/plain;charset=utf-8'}),'字幕.srt');
+}
+/* ---------- 配乐（工作台上传后经 IndexedDB 带到这里） ---------- */
+let bgmSrc=null,bgmPlaying=false;
+async function loadBgm(){
+  try{
+    const db=await openDB();
+    const r=await new Promise(function(res,rej){
+      const tx=db.transaction('media','readonly'),q=tx.objectStore('media').get('bgm');
+      q.onsuccess=function(){res(q.result);};q.onerror=function(){rej(q.error);};
+    });
+    db.close();
+    if(r&&r.blob){const arr=await r.blob.arrayBuffer();const b=await decodeAudio(arr);
+      if(b){bgmBuf=b;bgmName=r.name||'自定义配乐';
+        $('bgmNote').textContent='♪ 已载入配乐「'+bgmName+'」· 点「试听配乐」播放，导出按配乐音量混入。';
+        return true;}}
+  }catch(e){}
+  $('bgmNote').textContent='默认纯人声；工作台上传配乐后会自动带到这里，也可在本页上传。';
+  return false;
+}
+async function uploadBgm(file){
+  if(!file)return;
+  const b=await decodeAudio(await file.arrayBuffer());
+  if(!b){toast('配乐解码失败，请用 MP3 / WAV / M4A');return;}
+  bgmBuf=b;bgmName=file.name;
+  try{const db=await openDB();await new Promise(function(res,rej){
+    const tx=db.transaction('media','readwrite');
+    tx.objectStore('media').put({blob:file,name:file.name,at:Date.now()},'bgm');
+    tx.oncomplete=function(){res();};tx.onerror=function(){rej(tx.error);};});db.close();}catch(e){}
+  $('bgmNote').textContent='♪ 已载入配乐「'+bgmName+'」· 点「试听配乐」播放。';
+  toast('配乐已载入：'+file.name);
+}
+function previewBgm(){
+  if(!bgmBuf){toast('请先在工作台或本页上传配乐');return;}
+  if(bgmPlaying){try{bgmSrc.stop();}catch(e){}bgmPlaying=false;$('bgmTryBtn').textContent='▶ 试听配乐';return;}
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext,ctx=new AC();
+    bgmSrc=ctx.createBufferSource();bgmSrc.buffer=bgmBuf;
+    const g=ctx.createGain();g.gain.value=Math.max(0,Math.min(1,(state.gains.master||0)*(state.gains.music||0)));
+    bgmSrc.connect(g);g.connect(ctx.destination);bgmSrc.start();bgmPlaying=true;
+    $('bgmTryBtn').textContent='■ 停止试听';
+    bgmSrc.onended=function(){bgmPlaying=false;$('bgmTryBtn').textContent='▶ 试听配乐';try{ctx.close();}catch(e){}};
+  }catch(e){toast('试听失败：'+e.message);}
+}
+function showFallback(){toast('不支持 WebCodecs 时：用 Chrome/Edge 通过 http(s) 打开工程版 film.html');}
+function syncFilmCfgBack(){
+  /* 成片工作台内改的字幕/水印/音量也写回配置，返回工作台后状态一致 */
+  try{
+    var cfg={};try{cfg=JSON.parse(localStorage.getItem('xj_film_cfg')||'{}')||{};}catch(e){}
+    cfg.subOn=state.subOn;cfg.sub={size:state.sub.size,font:state.sub.font,color:state.sub.color,
+      bg:state.sub.bg,bgAlpha:state.sub.bgAlpha,charsPerLine:state.sub.charsPerLine,
+      posX:state.sub.posX,posY:state.sub.posY,align:state.sub.align,
+      typewriter:state.sub.typewriter,typeSpeed:state.sub.typeSpeed};
+    cfg.wm=Object.assign({},state.wm);
+    cfg.gains=Object.assign({},state.gains);
+    localStorage.setItem('xj_film_cfg',JSON.stringify(cfg));
+  }catch(e){}
+}
+
+/* ---------- 返回工作台 ---------- */
+function backToWorkbench(){
+  try{if(window.parent!==window){parent.postMessage('xj_film_back','*');return;}}catch(e){}
+  location.href='index.html';
+}
+
+/* ---------- 启动 ---------- */
+(function init(){
+  /* 工作台通过 localStorage / sessionStorage 传入当前城市、逐镜文案与成片配置；
+     单文件内嵌版没有第二个请求，也读同一份配置。 */
+  var cfg=null;try{cfg=JSON.parse(localStorage.getItem('xj_film_cfg')||'null');}catch(e){}
+  var payload=null;try{payload=JSON.parse(sessionStorage.getItem('xj_film_payload')||'null');}catch(e){}
+  if(payload&&payload.cityId)state.cityId=payload.cityId;
+  else if(cfg&&cfg.cityId)state.cityId=cfg.cityId;
+  if(payload&&payload.fps)state.fps=+payload.fps||24;
+  else if(cfg&&cfg.fps)state.fps=+cfg.fps||24;
+  if(payload&&payload.voice)state.voice=payload.voice;
+  else if(cfg&&cfg.voice)state.voice=cfg.voice;
+  if(payload&&payload.subOn!==undefined)state.subOn=!!payload.subOn;
+  else if(cfg&&cfg.subOn!==undefined)state.subOn=!!cfg.subOn;
+  var subCfg=(payload&&payload.sub)?payload.sub:(cfg&&cfg.sub);
+  if(subCfg)Object.assign(state.sub,subCfg);
+  var wmCfg=(payload&&payload.wm)?payload.wm:(cfg&&cfg.wm);
+  if(wmCfg){Object.assign(state.wm,wmCfg);
+    if(typeof wmCfg.opacity==='number')state.wm.alpha=wmCfg.opacity;}
+  var gainCfg=(payload&&payload.gains)?payload.gains:(cfg&&cfg.gains);
+  if(gainCfg)Object.assign(state.gains,gainCfg);
+  if(/[?&]embed=1/.test(location.search))document.body.classList.add('embed');
+  initCitySel();
+  cityObj=findCity(state.cityId);
+  SCENES=buildScenes(cityObj||{name:state.cityId});
+  var lines=(payload&&Array.isArray(payload.lines)&&payload.lines.length)?payload.lines:((cfg&&cfg.lines)||[]);
+  if(lines.length)SCENES.forEach(function(sc,i){if(lines[i]!=null&&String(lines[i]).trim())sc.lines=[String(lines[i])];});
+  $('ttsBase').value=state.ttsBase;$('ttsVoice').value=state.voice;$('fpsSel').value=String(state.fps);
+  syncGainUi();syncWmUi();
+  $('subOnBtn').classList.toggle('on',state.subOn);$('subOffBtn').classList.toggle('on',!state.subOn);
+  $('subKv').textContent=state.subOn?'画面烧录 + 可导出 SRT':'已关闭 · 成片与 SRT 均不含字幕';
+  renderSceneEdits();recalc();drawStage(0);
+  /* 素材图异步解码：预载完成后重绘预览与后续编码帧，避免底纹回落到矢量纹样。
+     编译中（按钮禁用）不打断，编码本身用离屏 canvas，与此重绘互不干扰。 */
+  window.addEventListener('xj-art-loaded',function(){
+    try{ if(!playing&&!$('compileBtn').disabled)drawStage(playT); }catch(e){}
+  });
+  (function(){try{XJ.preload(cityObj||{},function(){
+    try{ if(!playing&&!$('compileBtn').disabled)drawStage(playT); }catch(e){}
+  });}catch(e){}})();
+  $('voiceNote').textContent='尚未合成。接口不可达时会明确写明，并用占位音轨出片，不伪装成真人声。';
+  window.__READY=true;window.__STATE=state;
+  showRecovered();loadBgm();
+  if(/[?&]compile=1/.test(location.search)||/[?&]export=1/.test(location.search)){try{go('s5','导出');}catch(e){}}
+  window.__API={recalc:recalc,drawScene:drawScene,go:go,compile:compileFilm,
+    synthVoices:synthVoices,seekScene:seekScene,setRes:setRes,setFps:setFps,
+    setSubOn:setSubOn,previewBgm:previewBgm,loadBgm:loadBgm,
+    state:function(){return {subOn:state.subOn,sub:state.sub,wm:state.wm,gains:state.gains,
+      bgm:!!bgmBuf,bgmName:bgmName};},
+    get:function(){return {scenes:SCENES.length,durs:durs.slice(),frames:frames.slice(),F:F.slice(),
+      totalFrames:totalFrames,total:total,voiceKind:voiceKind,W:state.W,H:state.H,fps:state.fps};}};
+  /* 父页在离屏 iframe 里编译前同步注入当前城市 / 逐镜文案 / 字幕配置；
+     file:// 单文件版 storage 可能隔离，这条保证两边读同一份数据。 */
+  window.__XJ_APPLY_PAYLOAD=function(raw){
+    var p=null;try{p=JSON.parse(raw||'null');}catch(e){}
+    if(!p)return;
+    if(p.cityId)state.cityId=p.cityId;
+    if(p.fps)state.fps=+p.fps||24;
+    if(p.voice)state.voice=p.voice;
+    if(p.subOn!==undefined)state.subOn=!!p.subOn;
+    if(p.sub)Object.assign(state.sub,p.sub);
+    if(p.wm){Object.assign(state.wm,p.wm);if(typeof p.wm.opacity==='number')state.wm.alpha=p.wm.opacity;}
+    if(p.gains)Object.assign(state.gains,p.gains);
+    if(Array.isArray(p.lines)&&p.lines.length){
+      SCENES=buildScenes(findCity(state.cityId)||{name:state.cityId});
+      SCENES.forEach(function(sc,i){if(p.lines[i]!=null&&String(p.lines[i]).trim())sc.lines=[String(p.lines[i])];});
+    }
+    $('subOnBtn').classList.toggle('on',state.subOn);$('subOffBtn').classList.toggle('on',!state.subOn);
+    recalc();drawStage(0);
+  };
+})();
+</script>
+</body>
+</html>
