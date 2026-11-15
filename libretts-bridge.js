@@ -392,14 +392,14 @@
   LT.fetchAudio = fetchAudio;
   LT.bakeAll = bakeAll;
 
-  /* ------------------------------------------------------------- 制作包 */
+  /* ------------------------------------------------------------- 配置存档 */
   function projectPack() {
     var tl = [];
     try { tl = window.videoTimeline ? window.videoTimeline() : []; } catch (e) { }
     return {
       format: 'xingji-pages-project', version: 1,
       generated_at: new Date().toISOString(),
-      site: { kind: 'github-pages-static', note: '所有合成在浏览器完成；CI 可选重建 media/latest/' },
+      site: { kind: 'github-pages-static', note: '纯静态站点；所有合成在浏览器完成，Actions 只负责发布' },
       city: (typeof S !== 'undefined' && S.dest) ? { name: S.dest.name, id: S.dest.id } : null,
       config: (typeof S !== 'undefined') ? {
         days: S.days, month: S.month, style: S.style, budget: S.budget,
@@ -442,8 +442,8 @@
   function exportProjectPack() {
     var j = projectPack();
     window.download(new Blob([JSON.stringify(j, null, 2)], { type: 'application/json' }),
-      '行迹_制作包_' + ((j.city && j.city.name) || '行程') + '.json');
-    toast('制作包已导出：可放进 media/source/ 让 GitHub Actions 重建静态成品');
+      '行迹_配置存档_' + ((j.city && j.city.name) || '行程') + '.json');
+    toast('配置存档已导出：可在本工作台载入回填文案、水印与音频配置');
   }
   async function importProjectPack(file) {
     if (!file) return;
@@ -483,8 +483,8 @@
       }
       markDirty(); renderCard();
       if (window.renderVideoPanel) window.renderVideoPanel();
-      toast('制作包已载入：文案、接口、水印与音频配置已回填' + (extra ? '（含扩展配置）' : ''));
-    } catch (e) { toast('制作包解析失败：' + String(e.message || e).slice(0, 60)); }
+      toast('配置存档已载入：文案、接口、水印与音频配置已回填' + (extra ? '（含扩展配置）' : ''));
+    } catch (e) { toast('配置存档解析失败：' + String(e.message || e).slice(0, 60)); }
   }
 
   /* ------------------------------------------- 静态成品（同目录相对路径） */
@@ -494,7 +494,7 @@
     var m = LATEST_DATA;
     if (!m) {
       box.innerHTML = '<div class="lt-latest lt-latest-mini">☁ ' +
-        (m === null ? '暂无站点静态成品 · 本地一键成片照常可用（制作包放进 <code>media/source/</code> 后跑 Actions 可发布成品）'
+        (m === null ? '暂无站点静态成品 · 本地一键成片照常可用'
           : '正在检查站点静态成品…') + '</div>';
       return;
     }

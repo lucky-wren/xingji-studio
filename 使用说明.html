@@ -148,18 +148,19 @@ a{color:var(--green)}
     <tr><td>⚡ 快速导出</td><td>WebCodecs 非实时编码的 WebM（VP8/VP9 + Opus），自带人声与配乐，几秒出片</td></tr>
     <tr><td>↓ 完整混音 WAV / SRT / 文稿</td><td>人声 + 配乐音轨、按真实时长生成的字幕文件</td></tr>
     <tr><td>↓ PNG 分镜包</td><td>逐镜高清帧图 + 时间轴 JSON + SRT + 说明，可进剪映 / PR</td></tr>
-    <tr><td>↓ 制作包 JSON</td><td>文案 + 接口/音色/语速 + 每镜真实时长</td></tr>
+    <tr><td>↓ 制作包 JSON</td><td>文案 + 接口/音色/语速 + 每镜真实时长（浏览器里导出／回填用的配置文件，<b>不是</b>上传到仓库的构建输入）</td></tr>
     <tr><td>📺 仅字幕</td><td>明确无配音，秒级出片</td></tr>
   </table>
-  <p>要<b>通用 H.264/AAC MP4</b>：把制作包和帧图放进 <code>media/source/</code>，在 Actions 跑「重建静态成品」。</p>
+  <p>成片在浏览器里按帧编码并封装 MP4，点「导出成片」直接下载；不需要 ffmpeg、不需要往仓库放制作包，也不需要跑任何构建任务。</p>
 </div>
 
-<h2><span>06</span>让网站打开就有成品（可选）</h2>
+<h2><span>06</span>上线：只有部署，没有构建</h2>
 <div class="card">
-  <div class="step"><div class="num">1</div><div>工作台点「↓ 制作包 JSON」→ 存为 <code>media/source/project.json</code></div></div>
-  <div class="step"><div class="num">2</div><div>工作台点「PNG 分镜包」→ 帧图放进 <code>media/source/frames/</code></div></div>
-  <div class="step"><div class="num">3</div><div>GitHub Actions 手动跑「重建静态成品（LibreTTS 神经人声）」</div></div>
-  <div class="step"><div class="num">4</div><div>7 项硬校验全过才发布到 <code>media/latest/</code>；页面按相对路径读取，刷新不丢、可开关软字幕</div></div>
+  <div class="step"><div class="num">1</div><div>把交付包完整解压到空文件夹，<code>index.html</code> 与 <code>deploy.bat</code> 在同一层</div></div>
+  <div class="step"><div class="num">2</div><div>双击 <code>deploy.bat</code> → 粘贴 Token（勾 repo + workflow）</div></div>
+  <div class="step"><div class="num">3</div><div>脚本一次提交推完静态文件，Pages Source 自动设为 GitHub Actions</div></div>
+  <div class="step"><div class="num">4</div><div>Actions 只跑「Deploy GitHub Pages」：数据硬校验 → 上传根目录 → 发布；打开站点前 Ctrl+F5</div></div>
+  <p class="warn-mini">仓库里只允许 <code>pages.yml</code> 这一个工作流。若 Actions 列表里还出现「重建静态成品」并提示缺少 <code>media/source/project.json</code>，说明仓库或本地解压目录里残留了旧包的工作流文件：用新包的 <code>deploy.py</code> 再跑一次即可，脚本不会上传、并会随本次提交清掉任何非 <code>pages.yml</code> 的工作流，结束后还会复核一遍。<b>不要去补这个 JSON</b>；最干净的做法是把交付包解压到一个全新空文件夹。</p>
 </div>
 
 <div class="warn">

@@ -2,7 +2,7 @@
 
 把**完整行程规划**和**行程成片**做成一个可直接部署到 GitHub Pages 的静态站点。选城市、天数、风格与月份，工作台生成逐日路线、衣食住行、地图与视频分镜；逐句合成人声后，由音频的真实时长统一决定帧长、字幕窗口、SRT 与音轨位置。
 
-站点是纯静态的：没有服务端、没有本地数据库、不需要安装依赖。所有合成在浏览器完成；也可以选用 GitHub Actions 预先重建成品，让网站打开即可播放。
+站点是纯静态的：没有服务端、没有本地数据库、不需要安装依赖。所有合成、逐帧编码与导出都在浏览器完成；GitHub Actions 只负责部署与数据硬校验，不构建任何成品。
 
 ---
 
@@ -137,25 +137,24 @@ GET  /api/voices?l=zh&f=1
 | ↓ 完整混音 WAV | 人声 + 配乐，OfflineAudioContext 预混 |
 | ↓ 字幕 SRT / 文稿 | 按 `durs[]` 生成，逐字等于画面字幕 |
 | ↓ PNG 分镜包 ZIP | 逐镜高清帧图 + 时间轴 JSON + SRT + 说明 |
-| ↓ 制作包 JSON | 文案 + 接口 / 音色 / 语速 + 每镜真实时长，供 CI 重建 |
+| ↓ 制作包 JSON | 文案 + 接口 / 音色 / 语速 + 每镜真实时长，可在本工作台载入回填 |
 | 📺 仅字幕 | 明确无配音，秒级出片 |
 
-浏览器 WebCodecs 在 Chromium 里产出 VP8/VP9 + Opus 的 WebM；要通用 H.264/AAC MP4，用「PNG 分镜包 + 制作包」交给 `tools/build_film.py`（本机或 Actions，需要 ffmpeg）。
+成片在浏览器里按帧编码并封装 MP4，点「导出成片」直接下载；片长由每镜音频真实时长 + 尾留白统一决定，与机器快慢、是否切后台无关。站点是纯静态，不需要服务端、不需要 ffmpeg，也不需要向仓库放任何制作包输入。
 
-水印烧录在 `drawScene()` 输出层最后一步，因此预览、快速导出 WebM、PNG 分镜包、无损工程包帧序列、GIF 与「分镜包 → CI 重建 MP4」链路全部自动带水印。图片水印以 Data URL 内嵌进制作包 JSON，载入时自动还原。
+水印烧录在 `drawScene()` 输出层最后一步，因此预览、逐帧成片、PNG 分镜包与 GIF 全部自动带水印。图片水印以 Data URL 内嵌进制作包 JSON，载入时自动还原。
 
-### 5.1 打开就有成品（可选）
+### 5.1 上线流程（只有部署，没有构建）
 
 ```text
-1) 工作台点「↓ 制作包 JSON」→ 存成 media/source/project.json
-2) 工作台点「PNG 分镜包」→ 帧图放进 media/source/frames/0001.png …
-3) GitHub Actions 手动跑「重建静态成品（LibreTTS 神经人声）」
-4) 构建器逐句合成 → ffprobe 读 durs[] → SRT / MP3 / 三轨 MP4
-   → 7 项硬校验全过才原子发布到 media/latest/
-5) 页面按相对路径读 media/latest/manifest.json，刷新不丢、横竖切换秒开
+1) 解压交付包 → 双击 deploy.bat → 粘贴 Token
+2) 一次提交推完静态文件 → Pages Source 自动设为 GitHub Actions
+3) Actions 只跑「Deploy GitHub Pages」：数据硬校验 → 上传根目录 → 发布
 ```
 
-硬校验不合格直接红灯、不发布半成品；软字幕轨可开关，不烧录。
+仓库里只允许 `pages.yml` 这一个工作流，不会检查 `media/source/project.json`；不要手动去跑任何「重建静态成品」任务，也不需要补这个文件。数据硬校验不合格会红灯不部署，但那是校验 `data/` 与分镜图，跟制作包无关。
+
+若 Actions 列表里仍出现一个红色 `build` / 「检查输入」并提示缺少 `media/source/project.json`，那是仓库或本地解压目录里残留的旧包工作流（`build-film.yml`、`build.yml`、`ci.yml` 等）。用新包的 `deploy.py` 再跑一次即可：任何非 `pages.yml` 的工作流都不上传，并随本次提交一并清掉，脚本结束前会复核仓库只剩 `pages.yml`。最干净的做法是把交付包解压到一个**全新空文件夹**，不要往旧文件夹里覆盖。
 
 ---
 
@@ -202,11 +201,9 @@ GET  /api/voices?l=zh&f=1
 ├── data/                         城市数据与全站配置（见第 6 节）
 ├── .nojekyll                     Pages 必需
 ├── .github/workflows/
-│   ├── pages.yml                 部署 + 数据硬校验
-│   └── build-film.yml            可选：重建静态成品
-├── media/latest/                 静态成品（Actions 产出，相对路径读取）
-├── media/source/                 制作包与帧图
-├── tools/                        转发桥 / mock / 构建器 / 校验器 / 打包与单文件生成
+│   └── pages.yml                 唯一工作流：部署 + 数据硬校验（无需构建输入）
+├── media/latest/                 可选的同目录静态成品（页面按相对路径读取）
+├── tools/                        转发桥 / mock / 数据校验器 / 打包与单文件生成
 ├── tests/                        浏览器端到端与冒烟回归
 ├── 0_先看这个.html               最短上手路径
 ├── 使用说明.html                 图文操作步骤

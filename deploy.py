@@ -45,7 +45,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-VERSION = '1.3'
+VERSION = '1.4'
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_REPO_NAME = 'xingji-studio'
 DEFAULT_BRANCH = 'main'
@@ -99,16 +99,37 @@ REQUIRED = (
     'data/plan-config.js',
     'vendor/mp4-muxer.js',
     '.nojekyll',
+    # 站点是纯静态，Actions 里只保留这一个部署工作流，不需要任何构建输入
     '.github/workflows/pages.yml',
-    '.github/workflows/build-film.yml',
     'tools/validate_full_data.py',
     'tools/validate_plan_config.py',
-    'tools/build_film.py',
 )
+
+# 站点是纯静态，Actions 里只允许这一个工作流。其它任何 .github/workflows/*.yml
+# 都是早期「制作包 JSON → CI 重建」流程的残留，不管叫什么名字（build.yml、
+# build-film.yml、ci.yml …），既不上传，远端已有的也随本次提交一并清掉；
+# 否则 push 会额外触发一个红色任务，报「缺少 media/source/project.json」。
+ALLOWED_WORKFLOWS = {'.github/workflows/pages.yml'}
+
+# 旧版「制作包 JSON → CI 重建静态成品」整套已下线：浏览器里直接逐帧导出成片，
+# 不需要 media/source/project.json。
+LEGACY_PATHS = {
+    'tools/build_film.py',
+    'media/source/README.md',
+}
+LEGACY_PREFIXES = ('media/source/',)
+
+
+def is_legacy(path: str) -> bool:
+    if path.startswith('.github/workflows/') and path.lower().endswith(('.yml', '.yaml')):
+        return path not in ALLOWED_WORKFLOWS
+    return path in LEGACY_PATHS or any(path.startswith(p) for p in LEGACY_PREFIXES)
 
 
 def is_default_skip(path: str) -> bool:
     """默认不随站点上传的测试脚本 / 验收材料（可用 --include-tests 放行）。"""
+    if is_legacy(path):
+        return True
     if path in REQUIRED:
         return False
     if any(path.startswith(d) for d in DEFAULT_SKIP_DIRS):
@@ -119,6 +140,8 @@ def is_default_skip(path: str) -> bool:
 
 def is_optional(path: str) -> bool:
     """上传失败时能否安全跳过：站点必需文件一律不许跳过。"""
+    if is_legacy(path):
+        return True
     if path in REQUIRED:
         return False
     p = path.lower()
@@ -167,6 +190,7 @@ def git_blob_sha(data: bytes) -> str:
 def collect(include_single: bool, include_tests: bool = False):
     items, skipped = {}, []
     deferred = []
+    legacy_local = []
     for base, dirs, names in os.walk(ROOT):
         rel_dir = os.path.relpath(base, ROOT).replace(os.sep, '/')
         if rel_dir == '.':
@@ -177,6 +201,10 @@ def collect(include_single: bool, include_tests: bool = False):
         for name in sorted(names):
             rel = posixpath.join(rel_dir, name) if rel_dir else name
             low = name.lower()
+            # 旧版构建流程残留：既不上传，也不作为「远端已有则保留」的候选
+            if is_legacy(rel):
+                legacy_local.append(rel)
+                continue
             if not include_tests and is_default_skip(rel):
                 deferred.append(rel)
                 continue
@@ -204,6 +232,11 @@ def collect(include_single: bool, include_tests: bool = False):
     if deferred:
         skipped.append('测试脚本 / 验收材料 %d 个（站点运行不需要，默认不上传；'
                        '加 --include-tests 可放行）' % len(deferred))
+    if legacy_local:
+        wf = [p for p in legacy_local if p.startswith('.github/workflows/')]
+        skipped.append('⚑ 本地解压目录里还留着旧包残留 %d 个（已忽略，不会上传；'
+                       '建议删掉整个旧文件夹重新解压）。其中工作流：%s'
+                       % (len(legacy_local), '、'.join(wf) if wf else '无'))
     return items, skipped, deferred
 
 
@@ -509,6 +542,8 @@ def deploy(args):
         for p in sorted(items):
             say('  %-52s %8d B  %s' % (p, items[p]['size'], items[p]['sha'][:8]))
         say('\n[dry-run] 全部 %d 个文件检查通过，站点必需文件齐全。' % len(items))
+        say('[dry-run] 旧版「制作包 JSON → CI 重建」工作流与输入已排除；'
+            'Actions 只会剩「Deploy GitHub Pages」，不需要 project.json。')
         return 0
 
     global _LAST_TOKEN
@@ -559,6 +594,13 @@ def deploy(args):
     removed = sorted(set(old) - set(items) - set(deferred_paths))
     unchanged = len(items) - len(changed)
     say('\n比对结果：新增/修改 %d · 未变 %d · 远端多余 %d' % (len(changed), unchanged, len(removed)))
+    legacy_remote = sorted(p for p in old if is_legacy(p))
+    if legacy_remote:
+        say('  ⚑ 将清理旧版 CI 残留 %d 项（不需要 project.json 的构建流程已下线）：' % len(legacy_remote))
+        for p in legacy_remote[:6]:
+            say('      − ' + p)
+        if len(legacy_remote) > 6:
+            say('      − …另有 %d 个' % (len(legacy_remote) - 6))
     for p in removed[:8]:
         say('  − %s' % p)
     if len(removed) > 8:
@@ -693,17 +735,24 @@ def deploy(args):
                 % (blocked[0][0], blocked[0][1], len(sha_map)))
         return sha_map, reused, uploaded, optional_skipped
 
+    committed_paths = set()
+
     def build_tree(sha_map, skipped_paths=()):
+        nonlocal committed_paths
         entries = [{'path': p, 'mode': '100644', 'type': 'blob',
                     'sha': sha_map.get(p) or old.get(p) or items[p]['sha']}
-                   for p in sorted(items)]
+                   for p in sorted(items) if not is_legacy(p)]
         have = {e['path'] for e in entries}
-        # 跳过的非必需文件：远端已有版本原样保留，别因为一次上传失败把它删掉
+        # 跳过的非必需文件：远端已有版本原样保留，别因为一次上传失败把它删掉；
+        # 但旧版构建流程残留一律不回填，否则 Actions 里又会多出红色任务。
         for p in skipped_paths:
+            if is_legacy(p):
+                continue
             if p not in have and p in old:
                 entries.append({'path': p, 'mode': '100644', 'type': 'blob', 'sha': old[p]})
                 have.add(p)
         entries.sort(key=lambda e: e['path'])
+        committed_paths = {e['path'] for e in entries}
         # 第一批不带 base_tree → 远端多余文件不会进最终目录，站点一次提交就干净
         return create_tree_chunked(gh, base, entries)
 
@@ -718,7 +767,8 @@ def deploy(args):
     if reused:
         say('  ↩ 复用上次已上传文件 %d 个；本次新传 %d 个' % (reused, uploaded))
 
-    keep_remote = tuple(optional_skipped) + tuple(deferred_paths)
+    keep_remote = tuple(p for p in tuple(optional_skipped) + tuple(deferred_paths)
+                        if not is_legacy(p))
     try:
         new_tree = build_tree(blob_sha, keep_remote)
     except DeployError as e:
@@ -728,7 +778,9 @@ def deploy(args):
             cache.clear()
             blob_sha, reused, uploaded, optional_skipped = upload_blobs(force=True, workers=workers)
             save_state(state)
-            new_tree = build_tree(blob_sha, tuple(optional_skipped) + tuple(deferred_paths))
+            new_tree = build_tree(blob_sha, tuple(p for p in
+                                 tuple(optional_skipped) + tuple(deferred_paths)
+                                 if not is_legacy(p)))
         else:
             raise
 
@@ -741,6 +793,21 @@ def deploy(args):
 
     update_ref(gh, base, branch, commit, head)
     say('\n已提交：%s（一次提交，只触发一次 Actions）' % msg)
+
+    # 复核：commit 的 tree 就是仓库此刻的完整文件集（不带 base_tree 指向远端旧树），
+    # 因此远端残留的构建型 workflow 在这次提交里已经被删除。用本次提交的
+    # 文件集做判据，比再查一次远端更可靠——接口短暂延迟不会造成误报。
+    extra_wf = sorted(p for p in committed_paths
+                      if p.startswith('.github/workflows/')
+                      and p.lower().endswith(('.yml', '.yaml'))
+                      and p not in ALLOWED_WORKFLOWS)
+    if extra_wf:
+        say('  ⚠ 本次提交仍带其它工作流，可能触发红色 build：')
+        for p in extra_wf[:6]:
+            say('      ! ' + p)
+    else:
+        say('  ✓ 工作流复核通过：本次提交只有 pages.yml，'
+            '不会再出现需要 project.json 的 build 任务。')
 
     _ensure_pages(gh, base, url)
 

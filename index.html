@@ -5689,7 +5689,7 @@ function watermarkCardHtml(){
    <option value="all" ${WM.scope==='all'?'selected':''}>全部镜头</option>
    <option value="endpoints" ${WM.scope==='endpoints'?'selected':''}>仅片头 / 片尾</option>
    <option value="body" ${WM.scope==='body'?'selected':''}>正片（不含片头片尾）</option></select></div>
-  <div class="hint-mini">文字与图片水印都随制作包 JSON 一起导出／回填；图片以 Data URL 内嵌，不依赖外部文件。</div>
+  <div class="hint-mini">文字与图片水印随当前配置一起保存／回填；图片以 Data URL 内嵌，不依赖外部文件。</div>
  </div>`;
 }
 /* 右侧参数面板：一次只呈现当前模块 */
